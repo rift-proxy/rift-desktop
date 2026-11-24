@@ -134,6 +134,7 @@ jobs:
           path: |
             reports/security/install-commands.yml
             reports/security/scanner-versions.txt
+            reports/security/osv.json
             reports/security/sbom
           if-no-files-found: error
           retention-days: 14
