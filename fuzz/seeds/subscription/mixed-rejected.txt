@@ -1,0 +1,2 @@
+trojan://p%40ss%3Aword@example.com:443#Sample
+ss://2022-blake3-aes-128-gcm:bad@example.com:443

@@ -1,0 +1,1 @@
+[Warning] outbound/vless[aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa]: dial tcp synthetic-canary.example:443: i/o timeout password=synthetic-canary

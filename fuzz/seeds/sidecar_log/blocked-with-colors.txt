@@ -1,0 +1,1 @@
++0300 2026-10-19 17:30:11 [31mERROR[0m [1 1ms] connection: lookup ya.ru: dial tcp 8.8.8.8:53: connectex: An attempt was made to access a socket in a way forbidden by its access permissions.

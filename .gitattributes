@@ -1,0 +1,2 @@
+# Preserve hash-checked fixtures and source bytes on Windows checkouts too.
+* text=auto eol=lf

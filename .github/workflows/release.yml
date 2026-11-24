@@ -1,0 +1,52 @@
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_run_id:
+        description: Successful manual dev Quality run with the accepted signed installer and matching PDB
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: release-promotion
+  cancel-in-progress: false
+jobs:
+  promote:
+    name: Promote the verified signed candidate
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    # Required reviewer + selected deployment branch main; no production secrets belong here.
+    environment: release
+    permissions:
+      contents: write # Create the version tag and draft release with verified candidate bytes.
+      actions: read # Read the selected Quality run and download its immutable artifact ID.
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - name: Verify exact Quality workflow/run/repository/dev SHA and equal main tree
+        id: candidate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
+        run: node tooling/candidate-release.mjs select
+      # Artifact ID is obtained from the authenticated, verified run, not a name search across runs.
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          artifact-ids: ${{ steps.candidate.outputs.artifact-id }}
+          run-id: ${{ inputs.candidate_run_id }}
+          repository: ${{ github.repository }}
+          github-token: ${{ github.token }}
+          path: candidate
+          merge-multiple: true
+      - name: Revalidate installer, matching PDB provenance, hashes and refs; create tag and draft
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
+          CANDIDATE_ARTIFACT_ID: ${{ steps.candidate.outputs.artifact-id }}
+        run: node tooling/candidate-release.mjs promote candidate

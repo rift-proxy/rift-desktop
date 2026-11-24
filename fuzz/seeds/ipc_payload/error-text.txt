@@ -1,0 +1,1 @@
+Request to https://example.com/path failed for user@example.com, token=abc123

@@ -1,0 +1,1 @@
+2026/10/29 21:51:23.832706 [Info] [174615456] app/proxyman/outbound: app/proxyman/outbound: failed to process outbound traffic > proxy/vless/outbound: failed to find an available destination > common/retry: [tls: failed to verify certificate: x509: certificate signed by unknown authority] > common/retry: all retry attempts failed

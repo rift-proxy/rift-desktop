@@ -1,0 +1,40 @@
+{
+  "platform": "linux-x86_64-glibc-2.28+",
+  "tools": {
+    "actionlint": {
+      "version": "1.7.12",
+      "url": "https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz",
+      "sha256": "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8",
+      "member": "actionlint"
+    },
+    "ghalint": {
+      "version": "1.6.0",
+      "url": "https://github.com/suzuki-shunsuke/ghalint/releases/download/v1.6.0/ghalint_1.6.0_linux_amd64.tar.gz",
+      "sha256": "eda1af79c1a4a31c2de5831cd1333ad582fa6fa72015f8e9c1c4525d550c1d35",
+      "member": "ghalint"
+    },
+    "shellcheck": {
+      "version": "0.11.0",
+      "url": "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.gz",
+      "sha256": "b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6",
+      "member": "shellcheck-v0.11.0/shellcheck"
+    },
+    "act": {
+      "version": "0.2.98",
+      "url": "https://github.com/nektos/act/releases/download/v0.2.98/act_Linux_x86_64.tar.gz",
+      "sha256": "d3344bd0810c04b000d2444030b08c90ab9fbf905bbe2c3e26298be00c620d65",
+      "member": "act"
+    },
+    "zizmor": {
+      "version": "1.32.0",
+      "url": "https://files.pythonhosted.org/packages/6f/b2/45f4fcb6f428e774750709ecf5320ba6d96393c03b941d9f37a4586f6924/zizmor-1.32.0-py3-none-manylinux_2_28_x86_64.whl",
+      "sha256": "84a6acb975accc13408786a2bd274b572537ca19c933ebbc13e78f3988562071",
+      "member": "zizmor-1.32.0.data/scripts/zizmor"
+    },
+    "pyflakes": {
+      "version": "4.1.0",
+      "url": "https://files.pythonhosted.org/packages/fd/52/98c9a0e4718abe887121279457bc7140115df22d714b7183880eb61e359f/pyflakes-4.1.0-py2.py3-none-any.whl",
+      "sha256": "b2e05e6bac8e49b67be2a6ffa63422c60f7193fc72e8180255907b41ec997dc1"
+    }
+  }
+}

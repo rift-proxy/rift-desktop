@@ -1,0 +1,65 @@
+{
+  "tolerance": 0.02,
+  "artifacts": {
+    "frontend_js": {
+      "paths": [
+        "desktop/dist/assets/*.js"
+      ],
+      "bytes": 334687
+    },
+    "frontend_js_largest": {
+      "paths": [
+        "desktop/dist/assets/*.js"
+      ],
+      "largest": true,
+      "bytes": 334687
+    },
+    "frontend_css": {
+      "paths": [
+        "desktop/dist/assets/*.css"
+      ],
+      "bytes": 18565
+    },
+    "rift_exe": {
+      "paths": [
+        "dist/windows-x64/rift-desktop.exe",
+        "target/release/rift-desktop.exe",
+        "target/x86_64-pc-windows-msvc/release/rift-desktop.exe"
+      ],
+      "bytes": 23176192,
+      "measured_with": "Historical cargo-xwin cross build (docs/build.md); MSVC differs: report-only until a reviewed Windows MSVC baseline is recorded"
+    },
+    "sing_box_exe": {
+      "paths": [
+        "desktop/src-tauri/binaries/sing-box-x86_64-pc-windows-msvc.exe"
+      ],
+      "bytes": 81883648
+    },
+    "xray_exe": {
+      "paths": [
+        "desktop/src-tauri/binaries/xray-x86_64-pc-windows-msvc.exe"
+      ],
+      "bytes": 34441728,
+      "measured_with": "Verified Xray 26.10.21 Windows x64 release binary (SHA-256 in tooling/sidecar.mjs), 2026-10-29"
+    },
+    "installer": {
+      "paths": [
+        "dist/windows-x64/bundle/nsis/*-setup.exe",
+        "target/release/bundle/nsis/*-setup.exe",
+        "target/x86_64-pc-windows-msvc/release/bundle/nsis/*-setup.exe"
+      ],
+      "tolerance": 0.03,
+      "bytes": 25386081,
+      "measured_with": "Historical cargo-xwin cross build (docs/build.md); MSVC differs: report-only until a reviewed Windows MSVC baseline is recorded",
+      "component_allowances": [
+        {
+          "name": "xray",
+          "version": "26.10.21",
+          "bytes": 9811158,
+          "binary_sha256": "c77a00eb84fb93ae044c2d771a1cabcc033b81e487253fbc35b12df6879c1e15",
+          "evidence": "tooling/perf/installer-component-cost.json"
+        }
+      ]
+    }
+  }
+}

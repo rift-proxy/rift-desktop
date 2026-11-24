@@ -1,0 +1,465 @@
+[
+  {
+    "ident": "superfluous-actions",
+    "severity": "Informational",
+    "path": ".github/workflows/checks-perf.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "callgrind"
+      },
+      {
+        "Key": "steps"
+      },
+      {
+        "Index": 2
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc",
+    "reason": "Pinned action installs the exact requested Rust toolchain/components; the preinstalled rustup executable does not provide that toolchain."
+  },
+  {
+    "ident": "superfluous-actions",
+    "severity": "Informational",
+    "path": ".github/workflows/checks-perf.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "code-size"
+      },
+      {
+        "Key": "steps"
+      },
+      {
+        "Index": 1
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc",
+    "reason": "Pinned action installs the exact requested Rust toolchain/components; the preinstalled rustup executable does not provide that toolchain."
+  },
+  {
+    "ident": "superfluous-actions",
+    "severity": "Informational",
+    "path": ".github/workflows/checks-perf.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "criterion"
+      },
+      {
+        "Key": "steps"
+      },
+      {
+        "Index": 1
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc",
+    "reason": "Pinned action installs the exact requested Rust toolchain/components; the preinstalled rustup executable does not provide that toolchain."
+  },
+  {
+    "ident": "superfluous-actions",
+    "severity": "Informational",
+    "path": ".github/workflows/checks-perf.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "profiling"
+      },
+      {
+        "Key": "steps"
+      },
+      {
+        "Index": 1
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc",
+    "reason": "Pinned action installs the exact requested Rust toolchain/components; the preinstalled rustup executable does not provide that toolchain."
+  },
+  {
+    "ident": "superfluous-actions",
+    "severity": "Informational",
+    "path": ".github/workflows/checks-rust.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "core"
+      },
+      {
+        "Key": "steps"
+      },
+      {
+        "Index": 1
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc",
+    "reason": "Pinned action installs the exact requested Rust toolchain/components; the preinstalled rustup executable does not provide that toolchain."
+  },
+  {
+    "ident": "superfluous-actions",
+    "severity": "Informational",
+    "path": ".github/workflows/checks-rust.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "dependency-policy"
+      },
+      {
+        "Key": "steps"
+      },
+      {
+        "Index": 1
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc",
+    "reason": "Pinned action installs the exact requested Rust toolchain/components; the preinstalled rustup executable does not provide that toolchain."
+  },
+  {
+    "ident": "superfluous-actions",
+    "severity": "Informational",
+    "path": ".github/workflows/checks-rust.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "coverage"
+      },
+      {
+        "Key": "steps"
+      },
+      {
+        "Index": 1
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc",
+    "reason": "Pinned action installs the exact requested Rust toolchain/components; the preinstalled rustup executable does not provide that toolchain."
+  },
+  {
+    "ident": "superfluous-actions",
+    "severity": "Informational",
+    "path": ".github/workflows/checks-rust.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "mutation"
+      },
+      {
+        "Key": "steps"
+      },
+      {
+        "Index": 1
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc",
+    "reason": "Pinned action installs the exact requested Rust toolchain/components; the preinstalled rustup executable does not provide that toolchain."
+  },
+  {
+    "ident": "superfluous-actions",
+    "severity": "Informational",
+    "path": ".github/workflows/checks-rust.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "fuzz-replay"
+      },
+      {
+        "Key": "steps"
+      },
+      {
+        "Index": 1
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc",
+    "reason": "Pinned action installs the exact requested Rust toolchain/components; the preinstalled rustup executable does not provide that toolchain."
+  },
+  {
+    "ident": "superfluous-actions",
+    "severity": "Informational",
+    "path": ".github/workflows/checks-security.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "source-scanners"
+      },
+      {
+        "Key": "steps"
+      },
+      {
+        "Index": 2
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc",
+    "reason": "Pinned action installs the exact requested Rust toolchain/components; the preinstalled rustup executable does not provide that toolchain."
+  },
+  {
+    "ident": "superfluous-actions",
+    "severity": "Informational",
+    "path": ".github/workflows/checks-security.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "frontend-and-licenses"
+      },
+      {
+        "Key": "steps"
+      },
+      {
+        "Index": 3
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc",
+    "reason": "Pinned action installs the exact requested Rust toolchain/components; the preinstalled rustup executable does not provide that toolchain."
+  },
+  {
+    "ident": "superfluous-actions",
+    "severity": "Informational",
+    "path": ".github/workflows/fuzz.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "fuzz"
+      },
+      {
+        "Key": "steps"
+      },
+      {
+        "Index": 2
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc",
+    "reason": "Pinned action installs the exact requested Rust toolchain/components; the preinstalled rustup executable does not provide that toolchain."
+  },
+  {
+    "ident": "dangerous-triggers",
+    "severity": "High",
+    "path": ".github/workflows/pr-policy.yml",
+    "route": [
+      {
+        "Key": "on"
+      },
+      {
+        "Key": "pull_request_target"
+      }
+    ],
+    "feature": "pull_request_target",
+    "reason": "Privileged trigger retained only for trusted default-branch metadata tooling and fork PR comments/labels. Exact workflow and helper hashes require renewed review on any edit; no PR code is executed. This remains a High finding, not a clean scan.",
+    "reviewed_sha256": {
+      ".github/workflows/pr-policy.yml": "fc3e2bec94e00c2db24cfa578d11f7cd080751135418344032ddc83aa294513b",
+      "tooling/pr-policy.mjs": "c661b8f046a3de528a1cd629256ede13ad44ecdb141229acdd29082424d5bcee"
+    }
+  },
+  {
+    "ident": "superfluous-actions",
+    "severity": "Informational",
+    "path": ".github/workflows/quality.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "native-debug"
+      },
+      {
+        "Key": "steps"
+      },
+      {
+        "Index": 1
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc",
+    "reason": "Pinned action installs the exact requested Rust toolchain/components; the preinstalled rustup executable does not provide that toolchain."
+  },
+  {
+    "ident": "superfluous-actions",
+    "severity": "Informational",
+    "path": ".github/workflows/quality.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "candidate"
+      },
+      {
+        "Key": "steps"
+      },
+      {
+        "Index": 1
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc",
+    "reason": "Pinned action installs the exact requested Rust toolchain/components; the preinstalled rustup executable does not provide that toolchain."
+  },
+  {
+    "ident": "self-repository",
+    "severity": "Low",
+    "path": ".github/workflows/quality.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "tooling"
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "./.github/workflows/checks-tooling.yml",
+    "reason": "Keep supported ./ reusable workflow syntax; $/ requires newer runners and is not adopted only to silence this low-severity recommendation."
+  },
+  {
+    "ident": "self-repository",
+    "severity": "Low",
+    "path": ".github/workflows/quality.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "rust"
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "./.github/workflows/checks-rust.yml",
+    "reason": "Keep supported ./ reusable workflow syntax; $/ requires newer runners and is not adopted only to silence this low-severity recommendation."
+  },
+  {
+    "ident": "self-repository",
+    "severity": "Low",
+    "path": ".github/workflows/quality.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "security"
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "./.github/workflows/checks-security.yml",
+    "reason": "Keep supported ./ reusable workflow syntax; $/ requires newer runners and is not adopted only to silence this low-severity recommendation."
+  },
+  {
+    "ident": "self-repository",
+    "severity": "Low",
+    "path": ".github/workflows/quality.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "frontend"
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "./.github/workflows/checks-frontend.yml",
+    "reason": "Keep supported ./ reusable workflow syntax; $/ requires newer runners and is not adopted only to silence this low-severity recommendation."
+  },
+  {
+    "ident": "self-repository",
+    "severity": "Low",
+    "path": ".github/workflows/quality.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "perf"
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "./.github/workflows/checks-perf.yml",
+    "reason": "Keep supported ./ reusable workflow syntax; $/ requires newer runners and is not adopted only to silence this low-severity recommendation."
+  },
+  {
+    "ident": "self-repository",
+    "severity": "Low",
+    "path": ".github/workflows/quality.yml",
+    "route": [
+      {
+        "Key": "jobs"
+      },
+      {
+        "Key": "codeql"
+      },
+      {
+        "Key": "uses"
+      }
+    ],
+    "feature": "./.github/workflows/codeql.yml",
+    "reason": "Keep supported ./ reusable workflow syntax; $/ requires newer runners and is not adopted only to silence this low-severity recommendation."
+  }
+]

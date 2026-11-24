@@ -1,0 +1,8 @@
+# Windows-only mutants do not change any compiled code in the Linux mutation job.
+# Use --no-config when explicitly mutating core/src/windows.rs on Windows.
+exclude_globs = ["core/src/windows.rs"]
+exclude_re = [
+    # Only this cfg(windows) elevation expression; keep the Linux listener comparison in scope.
+    # Update the source position if the elevation guard moves.
+    "^core/src/runtime\\.rs:605:32: replace != with == in <impl Runtime for Sidecar>::start$",
+]

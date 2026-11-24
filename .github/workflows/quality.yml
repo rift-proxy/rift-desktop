@@ -1,0 +1,269 @@
+name: Quality
+on:
+  pull_request:
+    branches: [dev, main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  resolve:
+    name: Resolve immutable source and baseline
+    permissions:
+      contents: read
+    timeout-minutes: 5
+    runs-on: ubuntu-24.04
+    outputs:
+      source: ${{ steps.source.outputs.source }}
+      baseline: ${{ steps.source.outputs.baseline }}
+      full: ${{ steps.source.outputs.full }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - name: Fix source and independent performance baseline to immutable commits
+        id: source
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node tooling/pipeline-source.mjs
+  tooling:
+    permissions:
+      contents: read
+    needs: resolve
+    uses: ./.github/workflows/checks-tooling.yml
+    with:
+      ref: ${{ needs.resolve.outputs.source }}
+      full: ${{ needs.resolve.outputs.full == 'true' }}
+  rust:
+    permissions:
+      contents: read
+    needs: resolve
+    uses: ./.github/workflows/checks-rust.yml
+    with:
+      ref: ${{ needs.resolve.outputs.source }}
+      full: ${{ needs.resolve.outputs.full == 'true' }}
+  security:
+    permissions:
+      contents: read
+    needs: resolve
+    uses: ./.github/workflows/checks-security.yml
+    with:
+      ref: ${{ needs.resolve.outputs.source }}
+      full: ${{ needs.resolve.outputs.full == 'true' }}
+  frontend:
+    permissions:
+      contents: read
+    needs: resolve
+    uses: ./.github/workflows/checks-frontend.yml
+    with:
+      ref: ${{ needs.resolve.outputs.source }}
+      full: ${{ needs.resolve.outputs.full == 'true' }}
+  perf:
+    permissions:
+      contents: read
+    needs: resolve
+    uses: ./.github/workflows/checks-perf.yml
+    with:
+      ref: ${{ needs.resolve.outputs.source }}
+      full: ${{ needs.resolve.outputs.full == 'true' }}
+      baseline_ref: ${{ needs.resolve.outputs.baseline }}
+  codeql:
+    needs: resolve
+    if: needs.resolve.outputs.full == 'true'
+    permissions:
+      contents: read
+      security-events: write # The called CodeQL job uploads SARIF for the trusted dev source.
+    uses: ./.github/workflows/codeql.yml
+    with:
+      ref: ${{ needs.resolve.outputs.source }}
+      full: true
+  native-debug:
+    name: Unsigned Windows native checks
+    permissions:
+      contents: read
+    timeout-minutes: 90
+    needs: [resolve, frontend]
+    if: github.event_name == 'pull_request'
+    runs-on: windows-2022
+    env:
+      RIFT_PREBUILT_FRONTEND: '1'
+      RIFT_UPDATE_ENDPOINT: ''
+      TAURI_SIGNING_PRIVATE_KEY: ''
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
+      RIFT_BUILD_COMMIT: ${{ needs.resolve.outputs.source }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ needs.resolve.outputs.source }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: 1.98.1
+          components: clippy
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.34.5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: desktop/pnpm-lock.yaml
+      - run: pnpm --dir desktop install --frozen-lockfile
+      - run: node tooling/sidecar.mjs windows
+      # Omitting run-id/repository deliberately restricts download to this exact run.
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: frontend-bundle
+          path: desktop/dist
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Compile the actual unsigned native app, reusing the checked frontend
+        run: node tooling/tauri-build.mjs --debug --no-bundle -- --locked
+  source-gate:
+    name: All selected source checks
+    permissions: {}
+    timeout-minutes: 5
+    if: always()
+    needs: [resolve, tooling, rust, security, frontend, perf, codeql, native-debug]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Reject failures, cancellation and unexpected skips
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+          FULL: ${{ needs.resolve.outputs.full }}
+        run: |
+          node --input-type=module <<'NODE'
+          const results = JSON.parse(process.env.RESULTS);
+          if (!['true', 'false'].includes(process.env.FULL)) throw new Error('Source resolution did not succeed');
+          const full = process.env.FULL === 'true';
+          const selected = ['resolve', 'tooling', 'rust', 'security', 'frontend', 'perf', full ? 'codeql' : 'native-debug'];
+          for (const name of selected) if (results[name]?.result !== 'success') throw new Error(`Required job ${name} did not succeed`);
+          const unselected = full ? 'native-debug' : 'codeql';
+          if (results[unselected]?.result !== 'skipped') throw new Error(`Unexpected execution of ${unselected}`);
+          NODE
+  candidate:
+    name: Signed dev candidate and checks 39/41
+    permissions:
+      contents: read
+    timeout-minutes: 120
+    needs: [resolve, source-gate]
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/dev' && needs.resolve.outputs.full == 'true' && needs.source-gate.result == 'success'
+    runs-on: windows-2022
+    # Required reviewer + selected deployment branch dev are mandatory repository settings.
+    environment: candidate
+    env:
+      CARGO_HOME: C:\rift-cargo
+      RIFT_PREBUILT_FRONTEND: '1'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ needs.resolve.outputs.source }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: 1.98.1
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.34.5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: desktop/pnpm-lock.yaml
+      # Dependencies/downloads run before any signing secret enters the process environment.
+      - run: pnpm --dir desktop install --frozen-lockfile
+      - run: node tooling/sidecar.mjs windows
+      - run: cargo fetch --locked --target x86_64-pc-windows-msvc
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: frontend-bundle
+          path: desktop/dist
+      - name: Require native symbol inspection tools before signing
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $llvm = 'C:\Program Files\LLVM\bin'
+          if (Test-Path "$llvm/llvm-pdbutil.exe") {
+            Add-Content -Path $env:GITHUB_PATH -Value $llvm
+            $env:PATH = "$llvm;$env:PATH"
+          }
+          Get-Command 7z -ErrorAction Stop | Out-Null
+          node tooling/symbols-archive.mjs check-native-tools
+          exit $LASTEXITCODE
+      - name: Build and qualify the signed installer from the checked source
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          RIFT_BUILD_COMMIT: ${{ needs.resolve.outputs.source }}
+          GH_REPOSITORY: ${{ github.repository }}
+          SOURCE_SHA: ${{ needs.resolve.outputs.source }}
+          RIFT_BUNDLE_CONFIG: src-tauri/tauri.release.conf.json
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = (Get-Content desktop/src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          $env:SOURCE_TREE = (git rev-parse 'HEAD^{tree}').Trim()
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          New-Item -ItemType Directory candidate, reports | Out-Null
+          $env:RIFT_UPDATE_ENDPOINT = "https://github.com/$env:GH_REPOSITORY/releases/latest/download/latest.json"
+          # No stale installer, signature or PDB can qualify this build.
+          Remove-Item target/release/bundle/nsis -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item target/release/rift_desktop.pdb -Force -ErrorAction SilentlyContinue
+          node tooling/release-check.mjs environment
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tooling/tauri-build.mjs --ci -- --locked
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tooling/perf/size-budget.mjs --require frontend_js,frontend_js_largest,frontend_css,rift_exe,sing_box_exe,xray_exe,installer --report-only rift_exe,installer | Tee-Object -FilePath "reports/size-budgets.txt"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tooling/prepare-update-assets.mjs "v$version" target/release/bundle/nsis candidate/public
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tooling/packaged-cores.mjs "candidate/public/Rift_${version}_x64-setup.exe"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tooling/symbols-archive.mjs native target/release/rift_desktop.pdb target/release/rift-desktop.exe candidate/public
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tooling/candidate-release.mjs create candidate
+          exit $LASTEXITCODE
+      - name: Retain numeric size evidence for native baseline review
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: candidate-size-measurements
+          retention-days: 7
+          if-no-files-found: error
+          path: reports/size-budgets.txt
+      # Exact allowlist is validated before upload; frontend maps and third-party PDBs are excluded.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: signed-windows-candidate
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            candidate/public/*-setup.exe
+            candidate/public/*-setup.exe.sig
+            candidate/public/latest.json
+            candidate/public/Rift_*_x64.pdb
+            candidate/public/Rift_*_x64.symbols.json
+            candidate/manifest.json
+  selected-gate:
+    name: Quality selected checks
+    permissions: {}
+    timeout-minutes: 5
+    if: always()
+    needs: [resolve, source-gate, candidate]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require the complete selected PR or dev path
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+          FULL: ${{ needs.resolve.outputs.full }}
+        run: |
+          node --input-type=module <<'NODE'
+          const results = JSON.parse(process.env.RESULTS);
+          if (!['true', 'false'].includes(process.env.FULL)) throw new Error('Source resolution failed');
+          for (const name of ['resolve', 'source-gate']) if (results[name]?.result !== 'success') throw new Error(`Required job ${name} did not succeed`);
+          const expected = process.env.FULL === 'true' ? 'success' : 'skipped';
+          if (results.candidate?.result !== expected) throw new Error('Selected candidate path did not finish successfully');
+          NODE

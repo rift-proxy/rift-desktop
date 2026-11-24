@@ -1,0 +1,1 @@
+{"downloadTotal":10,"uploadTotal":20,"connections":[{"id":"c1","metadata":{"network":"tcp","type":"http","sourceIP":"192.0.2.10","sourcePort":"50000","destinationIP":"198.51.100.7","destinationPort":"443","host":"example.com","processPath":"C:\\Program Files\\App\\app.exe"},"upload":10,"download":20,"start":"2026-10-17T12:00:00.5+03:00","chains":["a","main"],"rule":"final"}]}

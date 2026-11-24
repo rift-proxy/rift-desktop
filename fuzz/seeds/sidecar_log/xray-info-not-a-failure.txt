@@ -1,0 +1,1 @@
+[Info] proxy/vless/outbound: tunneling request to tcp:synthetic-canary.example:443 via x509

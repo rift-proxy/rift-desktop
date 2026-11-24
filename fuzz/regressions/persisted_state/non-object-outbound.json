@@ -1,0 +1,1 @@
+{"version":1,"settings":{},"servers":[{"id":"s1","name":"n","country":"","protocol":"vless","host":"example.com","port":443,"outbound":"x","source":null}],"subscriptions":[],"selected":null}

@@ -1,0 +1,1 @@
+{"remarks":"Flat","outbounds":[{"protocol":"vless","settings":{"address":"f.example","port":443,"id":"11111111-2222-3333-4444-555555555555","encryption":"none"},"streamSettings":{"network":"grpc","grpcSettings":{"serviceName":"svc"},"security":"tls","tlsSettings":{"serverName":"f.example"}}}]}

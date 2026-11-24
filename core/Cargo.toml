@@ -1,0 +1,70 @@
+[package]
+name = "rift-core"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[dependencies]
+aho-corasick = "1.1.5"
+async-trait = "0.1"
+base64 = "0.22"
+futures = "0.3"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "bmp"] }
+percent-encoding = "2"
+regex = "1"
+regex-syntax = "0.8"
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "query", "stream", "http2", "socks"] }
+rqrr = "0.11.0"
+# Only to recognise a TLS failure in the chain of a request error; the provider is reqwest's.
+rustls = { version = "0.23", default-features = false, features = ["std"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["float_roundtrip", "raw_value"] }
+sha2 = "0.10"
+tempfile = "3"
+thiserror = "2"
+tokio = { version = "1", features = ["full", "test-util"] }
+tokio-util = "0.7"
+url = "2"
+uuid = { version = "1", features = ["v4", "serde"] }
+
+[dev-dependencies]
+rcgen = { version = "0.14.5", default-features = false, features = ["aws_lc_rs", "pem"] }
+tokio-rustls = { version = "0.26", default-features = false, features = ["aws_lc_rs"] }
+proptest = "1"
+criterion = "0.8.2"
+qrcode = { version = "0.14", default-features = false, features = ["image"] }
+
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+# Must match the installed gungraun-runner version.
+gungraun = "=0.19.4"
+
+[[bench]]
+name = "core"
+harness = false
+
+[[bench]]
+name = "core_gungraun"
+harness = false
+
+# Performance-oriented lints on top of the default set (clippy runs with -D warnings).
+[lints.clippy]
+perf = { level = "warn", priority = -1 }
+redundant_clone = "warn"
+implicit_clone = "warn"
+inefficient_to_string = "warn"
+needless_pass_by_value = "warn"
+large_types_passed_by_value = "warn"
+trivially_copy_pass_by_ref = "warn"
+large_stack_arrays = "warn"
+unnecessary_box_returns = "warn"
+format_collect = "warn"
+needless_collect = "warn"
+or_fun_call = "warn"
+manual_string_new = "warn"
+
+[target.'cfg(windows)'.dependencies]
+netdev = { version = "=0.47.0", default-features = false, features = ["gateway"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Security", "Win32_System_Threading", "Win32_System_JobObjects", "Win32_System_Diagnostics_ToolHelp", "Win32_System_Com", "Win32_System_Registry", "Win32_UI_Shell"] }
+winreg = "0.55"
+windows-version = "0.1.7"

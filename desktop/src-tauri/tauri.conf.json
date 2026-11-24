@@ -1,0 +1,64 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Rift",
+  "version": "1.1.1",
+  "identifier": "app.rift.desktop",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "appDirectoriesOverride": "./data",
+    "windows": [
+      {
+        "label": "main",
+        "title": "Rift",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 1000,
+        "minHeight": 680,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src ipc: http://ipc.localhost; img-src 'self' asset: http://asset.localhost data:; style-src 'self' 'unsafe-inline'; script-src 'self'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "externalBin": ["binaries/sing-box", "binaries/xray"],
+    "icon": ["icons/icon.png", "icons/icon.ico"],
+    "resources": {
+      "../../LICENSE": "LICENSE",
+      "../../THIRD-PARTY-NOTICES.md": "THIRD-PARTY-NOTICES.md",
+      "../../sing-box-LICENSE": "sing-box-LICENSE",
+      "../../xray-LICENSE": "xray-LICENSE",
+      "../../tao-LICENSE": "tao-LICENSE"
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper",
+        "silent": true
+      },
+      "nsis": {
+        "template": "windows/installer.nsi",
+        "installerHooks": "windows/installer-hooks.nsh",
+        "installMode": "currentUser",
+        "languages": ["Russian"],
+        "customLanguageFiles": { "Russian": "windows/lang/Russian.nsh" },
+        "displayLanguageSelector": false
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM5M0NFMzYwOEI1Mzg3MzcKUldRM2gxT0xZT004eVdWU01oVFVsbXZaOSszL3FzSE5MTHRhQ3IzVEFsMVlsNzR2L09GSGdyYXQK",
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

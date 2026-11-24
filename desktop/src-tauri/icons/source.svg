@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="rift-background" x1="72" y1="64" x2="440" y2="448" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#184a9e"/>
+      <stop offset="1" stop-color="#4f82dd"/>
+    </linearGradient>
+  </defs>
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="url(#rift-background)"/>
+  <g fill="#fff">
+    <path d="M48 422 98 324l92-25 20 20 46-4 10 18-82 41 70-26 12 34-22 40Z"/>
+    <path d="m274 332 44-24 65-10 47 18 34 85-137 2-26-16-8-33Z"/>
+    <path d="m123 219 44-38 56 26 17 66-47-19Z"/>
+    <path d="m372 219-35-35-45 31-12 55 46-18Z"/>
+    <path d="m218 111 32 17-23 45Z"/>
+    <path d="m218 221 27-4 6 54-21-18Z"/>
+    <path d="m324 246 21 7-17 22-19-8Z"/>
+  </g>
+</svg>

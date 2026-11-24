@@ -1,0 +1,159 @@
+name: Frontend checks
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+      full:
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  frontend:
+    name: Frontend 13–16, 18–19, 22–26
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CI: 'true'
+      # Full dev qualification repeats this exact group; there is no extra UI gate.
+      STORYBOOK_DISABLE_TELEMETRY: '1'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.34.5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: desktop/pnpm-lock.yaml
+      - name: Install locked frontend tools
+        run: pnpm --dir desktop install --frozen-lockfile
+      - name: '13 · Frontend format (advisory formatting, blocking tool errors)'
+        run: node tooling/format-check.mjs
+      - name: '14 · Frontend lint'
+        run: pnpm --dir desktop lint
+      # The build script is tsc --noEmit && vite build: do not typecheck twice.
+      - name: '15–16 · Typecheck and production build'
+        env:
+          # Only the original production build emits maps, outside the shipped bundle.
+          RIFT_MAPS_DIR: ${{ inputs.full && format('{0}/frontend-maps', runner.temp) || '' }}
+        run: pnpm --dir desktop build
+      - name: Archive matching production JavaScript and maps (public plaintext)
+        if: ${{ inputs.full }}
+        run: node tooling/symbols-archive.mjs frontend "$RUNNER_TEMP/frontend-maps" desktop/dist "$RUNNER_TEMP/frontend-symbols.tar"
+      - name: Retain public plaintext frontend symbols
+        if: ${{ inputs.full }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: frontend-symbols
+          retention-days: 30
+          if-no-files-found: error
+          path: ${{ runner.temp }}/frontend-symbols.tar
+      - name: Install the lockfile-matched Chromium and system libraries
+        run: pnpm --dir desktop exec playwright install --with-deps chromium
+      - name: '18–19, 22 · Unit, production stories/a11y and coverage'
+        id: coverage
+        run: pnpm --dir desktop exec vitest run --coverage --coverage.reporter=json-summary
+      - name: '23 · Scoped frontend mutation'
+        id: mutation
+        run: pnpm --dir desktop mutate
+      - name: '24 · Build shared Storybook input'
+        id: storybook
+        run: pnpm --dir desktop build-storybook
+      - name: '25 · Browser E2E scenarios'
+        id: e2e
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: reports/ci-raw/e2e.json
+        run: pnpm --dir desktop test:e2e --reporter=json --output=test-results/e2e
+      # This helper chooses the official Noble image from the installed Playwright version.
+      # It consumes the same Storybook build and compares the committed PNGs without updates.
+      - name: '26 · Docker visual regression against committed baselines'
+        id: visual
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: reports/ci-raw/visual.json
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report
+          PLAYWRIGHT_HTML_OPEN: never
+        run: node tooling/visual-docker.mjs --reporter=json,html --output=test-results/visual --update-snapshots=none
+      # Aggregate evidence stays separate; visual diagnostics use only synthetic Storybook data.
+      - name: Upload visual HTML and screenshot diagnostics
+        id: visual_diagnostics
+        if: ${{ always() && steps.visual.outcome != 'skipped' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: frontend-visual-diagnostics
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            desktop/playwright-report/
+            desktop/test-results/visual/**/*.png
+      - name: Explain visual result and artifact
+        if: ${{ always() && steps.visual.outcome != 'skipped' }}
+        env:
+          VISUAL_ARTIFACT_URL: ${{ steps.visual_diagnostics.outputs.artifact-url }}
+          VISUAL_OUTCOME: ${{ steps.visual.outcome }}
+        run: node tooling/visual-summary.mjs desktop/reports/ci-raw/visual.json
+      - name: Summarize frontend coverage
+        id: coverage_summary
+        if: ${{ always() && steps.coverage.outcome != 'skipped' }}
+        run: node tooling/frontend-evidence.mjs coverage desktop/coverage/coverage-summary.json desktop/reports/ci/coverage.json
+      - name: Summarize frontend mutation
+        id: mutation_summary
+        if: ${{ always() && steps.mutation.outcome != 'skipped' }}
+        run: node tooling/frontend-evidence.mjs mutation desktop/reports/mutation/mutation.json desktop/reports/ci/mutation.json
+      - name: Summarize browser E2E
+        id: e2e_summary
+        if: ${{ always() && steps.e2e.outcome != 'skipped' }}
+        run: node tooling/frontend-evidence.mjs e2e desktop/reports/ci-raw/e2e.json desktop/reports/ci/e2e.json
+      - name: Summarize Docker visual regression
+        id: visual_summary
+        if: ${{ always() && steps.visual.outcome != 'skipped' }}
+        run: node tooling/frontend-evidence.mjs visual desktop/reports/ci-raw/visual.json desktop/reports/ci/visual.json
+      - name: Upload Vitest coverage evidence
+        if: ${{ always() && steps.coverage_summary.outcome == 'success' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: frontend-vitest-coverage
+          retention-days: 7
+          if-no-files-found: error
+          path: desktop/reports/ci/coverage.json
+      - name: Upload scoped mutation evidence
+        if: ${{ always() && steps.mutation_summary.outcome == 'success' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: frontend-mutation-report
+          retention-days: 7
+          if-no-files-found: error
+          path: desktop/reports/ci/mutation.json
+      - name: Upload browser E2E evidence
+        if: ${{ always() && steps.e2e_summary.outcome == 'success' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: frontend-e2e-report
+          retention-days: 7
+          if-no-files-found: error
+          path: desktop/reports/ci/e2e.json
+      - name: Upload Docker visual evidence
+        if: ${{ always() && steps.visual_summary.outcome == 'success' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: frontend-visual-report
+          retention-days: 7
+          if-no-files-found: error
+          path: desktop/reports/ci/visual.json
+      # A single input path uploads dist's contents, not an enclosing desktop directory.
+      # Native consumers download only from this run and explicitly bypass Tauri's hook.
+      - name: Upload successful production frontend
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: frontend-bundle
+          retention-days: 7
+          if-no-files-found: error
+          path: desktop/dist/

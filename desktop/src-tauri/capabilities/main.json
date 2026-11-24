@@ -1,0 +1,1 @@
+{"identifier":"main","description":"The main local window listens for Rust state events. Tauri event permissions are not scoped by event name; errors arrive as the rift://error event and are shown as a toast.","windows":["main"],"permissions":["core:event:allow-listen","core:event:allow-unlisten"]}

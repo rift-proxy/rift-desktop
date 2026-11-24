@@ -1,0 +1,33 @@
+# Reviewed upstream exceptions, carried into the standalone public repository.
+# Revisit on each Tauri/digest upgrade; these are not blanket severity filters.
+
+# glib is Linux-only via tauri tray-icon; the Windows build does not link it.
+# Rift does not call glib::VariantStrIter; no Tauri 2 fix (RUSTSEC-2024-0429).
+[[IgnoredVulns]]
+id = "GHSA-wrw7-89jp-8q8g"
+reason = "glib is Linux-only via tauri tray-icon; Windows build unaffected; no Tauri 2 fix (alias RUSTSEC-2024-0429)"
+
+# Unmaintained, not vulnerable; compile-time only via Linux glib-macros.
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0370"
+reason = "proc-macro-error unmaintained; compile-time only via glib-macros (Linux gtk chain)"
+
+# Unix-only zbus family via tauri-plugin-single-instance; absent from the
+# Windows graph. Revisit when the plugin moves off zbus 5.
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0370"
+reason = "zvariant unmaintained; Unix-only via tauri-plugin-single-instance > zbus; absent from the Windows graph"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0371"
+reason = "zbus_names unmaintained; Unix-only via tauri-plugin-single-instance > zbus; absent from the Windows graph"
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0372"
+reason = "zvariant_derive unmaintained; Unix-only via tauri-plugin-single-instance > zbus; absent from the Windows graph"
+
+# Temporary maintenance exception approved by the owner. Replace the unmaintained
+# dependency chain, then remove this entry; do not ignore future vulnerability IDs.
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0543"
+reason = "chrono unmaintained; temporary acceptance while replacing the upstream dependency chain with maintained packages"

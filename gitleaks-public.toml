@@ -1,0 +1,23 @@
+[extend]
+useDefault = true
+
+# Owner policy: synthetic test/fuzz files are excluded by path. Real keys in those
+# files will not be detected by this scan; production and examples stay in scope.
+[allowlist]
+paths = [
+  '''(^|/)(tests?|__tests__|testing|fuzz)/''',
+  '''(^|/)[^/]+\.(test|spec)\.[^/]+$''',
+]
+regexes = [
+  # Public pinned Xray binary, license and source SHA-256 values.
+  '''^a27e3f95ab6ce270956d0cecd32eda4686a811afc71c64a6a734a3dede14883e$''',
+  '''^c77a00eb84fb93ae044c2d771a1cabcc033b81e487253fbc35b12df6879c1e15$''',
+  '''^1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5$''',
+  '''^40878700df0bc24e4ff87bea2669e6f3d2f00f9e2864c841ea35d096134c6ced$''',
+  '''^01d1808afc8478373a201990c55d0ef2c037939f083a4cde96f29cf04135b7bb$''',
+  # Public protocol field name, not a key value.
+  '''^mldsa65Verify$''',
+  '''\b(test|probe|bench|perf|api)-secret-[0-9]{10,}\b''',
+  # Counting-sequence token in fuzz/seeds/helper_frame; never issued by a service.
+  '''^0123456789abcdef0123456789abcdef$''',
+]

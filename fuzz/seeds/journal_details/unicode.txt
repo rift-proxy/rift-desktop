@@ -1,0 +1,3 @@
+Ошибка подписки 🙂
+field=settings.vnext[0].users[0].id; line 3 column 18
+Bearer unknown-token-canary

@@ -1,0 +1,1 @@
+{"outbounds":[{"protocol":"trojan","settings":{"servers":[{"address":"private.example","port":443,"password":"raw-body-secret"}]}}]}

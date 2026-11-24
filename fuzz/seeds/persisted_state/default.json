@@ -1,0 +1,1 @@
+{"version":1,"settings":{"mode":"proxy","theme":"system","auto_select":true,"proxy_port":2080,"api_port":2081,"interval_secs":60,"endpoint_timeout_ms":1500,"proxy_timeout_ms":5000,"concurrency":10,"connectivity_url":"https://www.gstatic.com/generate_204","subscription_interval_mins":60},"servers":[],"subscriptions":[],"selected":null}

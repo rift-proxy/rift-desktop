@@ -1,0 +1,1 @@
++0300 2026-10-19 18:04:02 ERROR [2269456982 0ms] connection: open connection to x.example:80 using outbound/selector[main]: dial tcp 127.0.0.1:9: connect: connection refused

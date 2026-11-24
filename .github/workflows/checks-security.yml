@@ -1,0 +1,196 @@
+name: Security checks
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Immutable source SHA selected by Quality
+        type: string
+        required: true
+      full:
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  secrets:
+    name: 1–2 Gitleaks worktree and full history
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.11.1
+      - name: Install Gitleaks 8.30.1 (verified upstream release checksum)
+        # https://github.com/gitleaks/gitleaks/releases/tag/v8.30.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/security-bin"
+          curl --fail --silent --show-error --location --retry 3 https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz -o "$RUNNER_TEMP/gitleaks.tar.gz"
+          printf '%s  %s\n' 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb "$RUNNER_TEMP/gitleaks.tar.gz" | sha256sum --check --status
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP/security-bin" gitleaks
+          echo "$RUNNER_TEMP/security-bin" >> "$GITHUB_PATH"
+      - name: 1 — Scan all current source files without revealing findings
+        run: node tooling/security/gitleaks.mjs worktree
+      - name: 2 — Scan complete fetched history without revealing findings
+        if: ${{ !cancelled() }}
+        run: node tooling/security/gitleaks.mjs history
+      # No Gitleaks reports or scanner streams are uploaded, including on failure.
+
+  source-scanners:
+    name: 9–12 and 30 dependency, source and SBOM scanners
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.11.1
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: 1.98.1
+      - name: Install exact source scanner releases
+        # Release assets/digests: github.com/{opengrep/opengrep,google/osv-scanner,aquasecurity/trivy}/releases
+        # Cargo audit version/MSRV: https://crates.io/crates/cargo-audit/0.23.0
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/security-bin" reports/security
+          curl --fail --silent --show-error --location --retry 3 https://github.com/opengrep/opengrep/releases/download/v2.0.0/opengrep_linux_x86 -o "$RUNNER_TEMP/security-bin/opengrep"
+          printf '%s  %s\n' 37e93f4da5fd04a18c5c1febbdd12f7e98dfccd4d0c9cf2593bcb25eeb462da0 "$RUNNER_TEMP/security-bin/opengrep" | sha256sum --check --status
+          curl --fail --silent --show-error --location --retry 3 https://github.com/google/osv-scanner/releases/download/v2.7.1/osv-scanner_linux_amd64 -o "$RUNNER_TEMP/security-bin/osv-scanner"
+          printf '%s  %s\n' fb7dab19a8bd9bbe5c3189f09d4b7ee1820c9553a23bac202648a56efd2f6ee8 "$RUNNER_TEMP/security-bin/osv-scanner" | sha256sum --check --status
+          curl --fail --silent --show-error --location --retry 3 https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_Linux-64bit.tar.gz -o "$RUNNER_TEMP/trivy.tar.gz"
+          printf '%s  %s\n' bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf "$RUNNER_TEMP/trivy.tar.gz" | sha256sum --check --status
+          tar -xzf "$RUNNER_TEMP/trivy.tar.gz" -C "$RUNNER_TEMP/security-bin" trivy
+          chmod +x "$RUNNER_TEMP/security-bin/opengrep" "$RUNNER_TEMP/security-bin/osv-scanner"
+          echo "$RUNNER_TEMP/security-bin" >> "$GITHUB_PATH"
+          cargo +1.98.1 install cargo-audit --locked --version 0.23.0
+          # The checked-in workflow is the exact installation-command record.
+          cp .github/workflows/checks-security.yml reports/security/install-commands.yml
+      - name: 9 — Cargo audit every public Cargo lock
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo +1.98.1 audit --file Cargo.lock
+          cargo +1.98.1 audit --file fuzz/Cargo.lock
+      - name: 10 — OpenGrep default, Rust and security-audit policies
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -d '' -t rust_tests < <(git ls-files -z -- 'core/tests/*.rs')
+          # Explicit tests bypass OpenGrep's inherited tests-directory ignore.
+          # Never upload raw source-bearing scanner findings.
+          if opengrep scan --config p/default --config p/rust --config p/security-audit --disable-version-check --json-output "$RUNNER_TEMP/opengrep.json" . "${rust_tests[@]}" > "$RUNNER_TEMP/opengrep.log" 2>&1; then
+            node tooling/security/opengrep.mjs "$RUNNER_TEMP/opengrep.json"
+          else
+            scan_status=$?
+            printf 'OpenGrep scanner failed (exit %s); raw output is not published.\n' "$scan_status" >&2
+            exit "$scan_status"
+          fi
+      - name: 11 — OSV all public lockfiles
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -d '' -t locks < <(git ls-files -z -- '**/Cargo.lock' Cargo.lock '**/pnpm-lock.yaml' pnpm-lock.yaml '**/package-lock.json' package-lock.json '**/yarn.lock' yarn.lock)
+          test "${#locks[@]}" -ge 3
+          args=()
+          for lock in "${locks[@]}"; do args+=(--lockfile "$lock"); done
+          osv-scanner scan source --config osv-scanner.toml "${args[@]}" --format json --output-file reports/security/osv.json
+      - name: 12 — Trivy high/critical vulnerabilities
+        if: ${{ !cancelled() }}
+        run: trivy fs --skip-version-check --no-progress --scanners vuln --include-dev-deps --skip-dirs target --skip-dirs fuzz/target --skip-dirs node_modules --skip-dirs reports --severity HIGH,CRITICAL --exit-code 1 --format json --output reports/security/trivy-fs.json .
+      - name: 12 — Trivy high/critical misconfiguration
+        if: ${{ !cancelled() }}
+        run: trivy config --skip-version-check --skip-dirs target --skip-dirs fuzz/target --skip-dirs node_modules --skip-dirs reports --severity HIGH,CRITICAL --exit-code 1 --format json --output reports/security/trivy-config.json .
+      - name: 30 — Genuine CycloneDX for each public lock and SHA/hash evidence
+        if: ${{ !cancelled() }}
+        run: node tooling/security/evidence.mjs
+      - name: Record scanner versions
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          { cargo +1.98.1 audit --version; opengrep --version; osv-scanner --version; trivy --version; } > reports/security/scanner-versions.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: ${{ !cancelled() }}
+        with:
+          name: security-evidence-scanners
+          path: |
+            reports/security/install-commands.yml
+            reports/security/scanner-versions.txt
+            reports/security/sbom
+          if-no-files-found: error
+          retention-days: 14
+
+  frontend-and-licenses:
+    name: 17, 20–21 frontend audit and all dependency licenses
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+        with:
+          version: 10.34.5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.11.1
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: 1.98.1
+      - name: Install secretless frontend and exact security tools
+        # Official version refs: registry.npmjs.org/{retire,spdx-expression-parse}/{version}
+        shell: bash
+        run: |
+          set -euo pipefail
+          export RIFT_SECURITY_TOOLS="$RUNNER_TEMP/rift-security-tools"
+          printf 'RIFT_SECURITY_TOOLS=%s\n' "$RIFT_SECURITY_TOOLS" >> "$GITHUB_ENV"
+          pnpm --dir desktop install --frozen-lockfile --ignore-scripts
+          mkdir -p "$RIFT_SECURITY_TOOLS"
+          cp tooling/security-tools/package.json tooling/security-tools/package-lock.json "$RIFT_SECURITY_TOOLS/"
+          npm ci --prefix "$RIFT_SECURITY_TOOLS" --no-audit --no-fund --ignore-scripts
+          mkdir -p reports/security
+          npm list --prefix "$RIFT_SECURITY_TOOLS" --depth=0 --json > reports/security/npm-tools.json
+          cp .github/workflows/checks-security.yml reports/security/install-commands.yml
+      - name: 30 — Focused security/license/evidence behavioral tests
+        run: node --test 'tooling/security/*.test.mjs'
+      - name: 17 — Pnpm audit all installed dependency classes
+        if: ${{ !cancelled() }}
+        run: pnpm --dir desktop audit
+      - name: 20 — License compliance for Rust core, shell, fuzz and frontend
+        if: ${{ !cancelled() }}
+        run: node tooling/security/licenses.mjs
+      - name: 21 — Retire.js high/critical JavaScript scan
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: '"$RIFT_SECURITY_TOOLS/node_modules/.bin/retire" --path desktop --severity high --exitwith 13 --outputformat json --outputpath reports/security/retire.json'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: ${{ !cancelled() }}
+        with:
+          name: security-evidence-licenses
+          path: |
+            reports/security/install-commands.yml
+            reports/security/npm-tools.json
+            reports/security/licenses
+          if-no-files-found: error
+          retention-days: 14

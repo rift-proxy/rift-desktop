@@ -1,0 +1,2855 @@
+{
+  "cases": [
+    {
+      "case_id": "vless-none-tcp",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "2f5072a76ec90fd9e5e11efec610afe91b0aa59ce91372432ba9139abb8ce07c",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-none-ws",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "317c880cb0c02dc727e3ed834faa9f233104c2acd8984aa371a092be95045865",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "transport": {
+            "headers": {
+              "Host": "front.example"
+            },
+            "path": "/synthetic",
+            "type": "ws"
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-none-grpc",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "df111c354df053840d4fcb127d41593d5b68680565a73a99d2d37149a37160cc",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "transport": {
+            "service_name": "synthetic",
+            "type": "grpc"
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-tls-tcp",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "e4f40d1f9e344dfa5231eba40fd821a29e12a6491705342f88b17a3f8d58e5d3",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-tls-ws",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "e4de4c6b045a21fcc8b285df5d2287c9f825107dbbf2fb0bc1ee8e040dc20eb0",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "transport": {
+            "headers": {
+              "Host": "front.example"
+            },
+            "path": "/synthetic",
+            "type": "ws"
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-tls-grpc",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "b6af5405962c29f69b94b22f3dbfe7e876acdf8238c7a4fa5d8132cb477a5529",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "transport": {
+            "service_name": "synthetic",
+            "type": "grpc"
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-reality-tcp",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "01959d0479bf9163d011f05e5a6000aa4c4db2a8125e57952f6eddaab1270e11",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "reality": {
+              "enabled": true,
+              "public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "short_id": "ab12"
+            },
+            "server_name": "front.example",
+            "utls": {
+              "enabled": true,
+              "fingerprint": "chrome"
+            }
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless reality",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-reality-ws",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "167c23dcd2e2bf5d60f3fd8297b6f8f6d708561e0100a0822ef0cd8e0e1aced0",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "reality": {
+              "enabled": true,
+              "public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "short_id": "ab12"
+            },
+            "server_name": "front.example",
+            "utls": {
+              "enabled": true,
+              "fingerprint": "chrome"
+            }
+          },
+          "transport": {
+            "headers": {
+              "Host": "front.example"
+            },
+            "path": "/synthetic",
+            "type": "ws"
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless reality",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-reality-grpc",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "3cc9c537c179cb4cdc1711743f4143aab19563a06c8331bbc5fb0304824d0ed9",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "reality": {
+              "enabled": true,
+              "public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "short_id": "ab12"
+            },
+            "server_name": "front.example",
+            "utls": {
+              "enabled": true,
+              "fingerprint": "chrome"
+            }
+          },
+          "transport": {
+            "service_name": "synthetic",
+            "type": "grpc"
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless reality",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-tls-vision",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "cff168c1fc0c6a56435b648352fe6d259b6b8b809c5502789b91a8d9142dfbd2",
+        "name": "server.example",
+        "outbound": {
+          "flow": "xtls-rprx-vision",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-reality-vision",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "1e487e7b2ef6fa7c666a6283510b3fb41557095c7dcb01ded4d89b11a093770e",
+        "name": "server.example",
+        "outbound": {
+          "flow": "xtls-rprx-vision",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "reality": {
+              "enabled": true,
+              "public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "short_id": "ab12"
+            },
+            "server_name": "front.example",
+            "utls": {
+              "enabled": true,
+              "fingerprint": "chrome"
+            }
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless reality",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-tls-fp-chrome",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "d0976c42074521e6e831018a1e33cb53208bd0acabd5b0fa213784c8f24d88fe",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example",
+            "utls": {
+              "enabled": true,
+              "fingerprint": "chrome"
+            }
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-tls-fp-firefox",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "a57e21f07db9614d464086c57c155bf7aee12085faff14fc5237eb59b713a512",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example",
+            "utls": {
+              "enabled": true,
+              "fingerprint": "firefox"
+            }
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-tls-fp-edge",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "1fece4ba399f9165fc4fd632b3242442db3afc99ff15340877525083d02f08f3",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example",
+            "utls": {
+              "enabled": true,
+              "fingerprint": "edge"
+            }
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-tls-fp-safari",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "963068fbd81ca89ebf34e13866891dc66e15f1ca7a4a152a0c9ea1efed9a342a",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example",
+            "utls": {
+              "enabled": true,
+              "fingerprint": "safari"
+            }
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-tls-fp-360",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "303450ceb2aaf2a916b19dcb84be934f14d560089414e52941d83936a01c52ea",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example",
+            "utls": {
+              "enabled": true,
+              "fingerprint": "360"
+            }
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-tls-fp-qq",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "9b72c9ca3db15f8e85f0f37d000ce38168ade30aaac553bdd0e5234bc3adc80a",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example",
+            "utls": {
+              "enabled": true,
+              "fingerprint": "qq"
+            }
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-tls-fp-ios",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "665fdb7289fc07a7ff049362951a8086639b56fb1ce23c492859da950410d0ca",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example",
+            "utls": {
+              "enabled": true,
+              "fingerprint": "ios"
+            }
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-tls-fp-android",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "e3550eeb924895f023a6fee519058760cf2d32d66ce02c673c87274fd545f2b4",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example",
+            "utls": {
+              "enabled": true,
+              "fingerprint": "android"
+            }
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-tls-fp-random",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "477d8ef15e9f75331a7606e0870b0b5ecf1936ef11ca800e2da9e9fa08b9f320",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example",
+            "utls": {
+              "enabled": true,
+              "fingerprint": "random"
+            }
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vless-tls-fp-randomized",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "40ac172c414a998cb37ef0d7e36cd09bca256981c93dd0c1af482df18531165e",
+        "name": "server.example",
+        "outbound": {
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example",
+            "utls": {
+              "enabled": true,
+              "fingerprint": "randomized"
+            }
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless",
+        "source": null
+      }
+    },
+    {
+      "case_id": "trojan-tls-tcp",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "bbe71af5fcec8ed7da63e1186d2b8efa195a4ca4a8e2c8e9ab26629b2e9fd05d",
+        "name": "server.example",
+        "outbound": {
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "type": "trojan"
+        },
+        "port": 443,
+        "protocol": "trojan",
+        "source": null
+      }
+    },
+    {
+      "case_id": "trojan-tls-ws",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "5e81b07feb8bb74b4021a64749e3091faa0d0d8bdd8c13dfcb005ad86a7ef597",
+        "name": "server.example",
+        "outbound": {
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "transport": {
+            "headers": {
+              "Host": "front.example"
+            },
+            "path": "/synthetic",
+            "type": "ws"
+          },
+          "type": "trojan"
+        },
+        "port": 443,
+        "protocol": "trojan",
+        "source": null
+      }
+    },
+    {
+      "case_id": "trojan-tls-grpc",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "63c888e47b53952dd0495d09db1ada382f9f5570d02c688407b75e6069817bc0",
+        "name": "server.example",
+        "outbound": {
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "transport": {
+            "service_name": "synthetic",
+            "type": "grpc"
+          },
+          "type": "trojan"
+        },
+        "port": 443,
+        "protocol": "trojan",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-auto-tcp-none",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "6c04533f67a3f1c5f7b93fa61099e0eda43689271101cf58a37bf03851164807",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "auto",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-auto-tcp-tls",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "a27c03224d965bb426e1a74df21af68d39502ecbe08bd899940eb4d54f65e4bf",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "auto",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-auto-ws-none",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "3d549c568fabc53f71904a58aba484676f9227b9ae7f19750356adefe5d5ae88",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "auto",
+          "server": "server.example",
+          "server_port": 443,
+          "transport": {
+            "headers": {
+              "Host": "front.example"
+            },
+            "path": "/synthetic",
+            "type": "ws"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-auto-ws-tls",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "a3df609e45acf79b0ec974359edc409372091e3b69b905e2b376336d562edd74",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "auto",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "transport": {
+            "headers": {
+              "Host": "front.example"
+            },
+            "path": "/synthetic",
+            "type": "ws"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-auto-grpc-none",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "5bc687665630aeed9a0e6f43592b4404abfd29928440e5cdfdb6c5f84d929a33",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "auto",
+          "server": "server.example",
+          "server_port": 443,
+          "transport": {
+            "service_name": "synthetic",
+            "type": "grpc"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-auto-grpc-tls",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "d34259bf3085df0d99bc595d710c895b8d8a7621841a5fce4cd846c3c5b2ae2d",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "auto",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "transport": {
+            "service_name": "synthetic",
+            "type": "grpc"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-none-tcp-none",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "8c8ce704e6b6ffade5e0821d21819123ab56249943af512d3b229397572a21ee",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "none",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-none-tcp-tls",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "117d21343d050562218317dc6d43927e9e9f6670ee4a0bc7af6aef16143d9ae7",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "none",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-none-ws-none",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "c6987a761823fdfb1c426b71aedb8c2515145d1bb2af9510fb99d04eefeee43e",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "none",
+          "server": "server.example",
+          "server_port": 443,
+          "transport": {
+            "headers": {
+              "Host": "front.example"
+            },
+            "path": "/synthetic",
+            "type": "ws"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-none-ws-tls",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "1766f3cb02698017573071803e923f2c8abd74b4c167c426c45151edd64cd279",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "none",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "transport": {
+            "headers": {
+              "Host": "front.example"
+            },
+            "path": "/synthetic",
+            "type": "ws"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-none-grpc-none",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "c6b9401aef3baf50ad53f7e544b00730b3f0c198b730f32998d5827080e0cf6b",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "none",
+          "server": "server.example",
+          "server_port": 443,
+          "transport": {
+            "service_name": "synthetic",
+            "type": "grpc"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-none-grpc-tls",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "4fe75155b06fb3768c27642bf43ca8a7102e9a2567aa8d22412badee78b9d26f",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "none",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "transport": {
+            "service_name": "synthetic",
+            "type": "grpc"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-zero-tcp-none",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "59d14c05989e2c5f28793daf91f28e99de7f85f82a8c2ffd7da02f06677241e9",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "zero",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-zero-tcp-tls",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "46cd954056152f560aabe3d3246bbf7537ea83c45552d5b142b7c9d94dd25be6",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "zero",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-zero-ws-none",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "522be5df7379e279a9e79f82c413c61c4a3ca813034e7b3cdb4e03f26a0730c7",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "zero",
+          "server": "server.example",
+          "server_port": 443,
+          "transport": {
+            "headers": {
+              "Host": "front.example"
+            },
+            "path": "/synthetic",
+            "type": "ws"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-zero-ws-tls",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "615a5de19dd66c75022954ee8c2dd33586846644e4c0d17dc65738c26f57e48d",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "zero",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "transport": {
+            "headers": {
+              "Host": "front.example"
+            },
+            "path": "/synthetic",
+            "type": "ws"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-zero-grpc-none",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "9a4283428daa53a34d24b3f0b8cd371f703c2e9715df03b78831f9db11b80692",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "zero",
+          "server": "server.example",
+          "server_port": 443,
+          "transport": {
+            "service_name": "synthetic",
+            "type": "grpc"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-zero-grpc-tls",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "6a314a2d6c13d31e44a797f7c4491510d00eee7f596802e71c4979ff3db01021",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "zero",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "transport": {
+            "service_name": "synthetic",
+            "type": "grpc"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-aes-128-gcm-tcp-none",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "d291e6d92844184cc1cad02929346710f7bd795d0355db401af39dba0ec9d0b3",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "aes-128-gcm",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-aes-128-gcm-tcp-tls",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "3395e870a54d87157033199e1d68a801261e819dda3c28745b737327b7929d52",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "aes-128-gcm",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-aes-128-gcm-ws-none",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "299e7b04860f706b6ee15043e1eee235e78f910b4348bf9297d5585243975e33",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "aes-128-gcm",
+          "server": "server.example",
+          "server_port": 443,
+          "transport": {
+            "headers": {
+              "Host": "front.example"
+            },
+            "path": "/synthetic",
+            "type": "ws"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-aes-128-gcm-ws-tls",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "a495fdf09253fa7340e87a379e2b1cd816e3f5bf147c3e6ada0b6213d65fb7ca",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "aes-128-gcm",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "transport": {
+            "headers": {
+              "Host": "front.example"
+            },
+            "path": "/synthetic",
+            "type": "ws"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-aes-128-gcm-grpc-none",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "80fb70fca3b856547a5ad9a7f8fa089513f5191a678cc31ada00bcf3a0b31a0d",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "aes-128-gcm",
+          "server": "server.example",
+          "server_port": 443,
+          "transport": {
+            "service_name": "synthetic",
+            "type": "grpc"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-aes-128-gcm-grpc-tls",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "e9be1c0996ce4fd062721996878480e7d00c947216d45d0a5c8350f809ca3424",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "aes-128-gcm",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "transport": {
+            "service_name": "synthetic",
+            "type": "grpc"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-chacha20-poly1305-tcp-none",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "de45cdaf15e7a96a7d69cc808bf0111c069e38ba901a982f5a5f8addadec8211",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "chacha20-poly1305",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-chacha20-poly1305-tcp-tls",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "714ff48b197291dd78fa2579ec917c25189d18137d66f75f95defb0f772309fc",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "chacha20-poly1305",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-chacha20-poly1305-ws-none",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "b0b0935c5b3336232061bdea2923f39dc239b15d13a4fb1ea76ee07949a89dda",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "chacha20-poly1305",
+          "server": "server.example",
+          "server_port": 443,
+          "transport": {
+            "headers": {
+              "Host": "front.example"
+            },
+            "path": "/synthetic",
+            "type": "ws"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-chacha20-poly1305-ws-tls",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "1da802262fcfbdb7db52cb164af6452e75efac6d1b1b869dd5fb216d9a0b66d8",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "chacha20-poly1305",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "transport": {
+            "headers": {
+              "Host": "front.example"
+            },
+            "path": "/synthetic",
+            "type": "ws"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-chacha20-poly1305-grpc-none",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "cff8bd6b16690e66523dedf710b3f85de8be2590e8f5a674f836ecfb4e9ad690",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "chacha20-poly1305",
+          "server": "server.example",
+          "server_port": 443,
+          "transport": {
+            "service_name": "synthetic",
+            "type": "grpc"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-chacha20-poly1305-grpc-tls",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "87308dd8c71a4d3f62ac425f25e37eef17de36b8e8ab08f0f4a4a6150079f946",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "chacha20-poly1305",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "transport": {
+            "service_name": "synthetic",
+            "type": "grpc"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-aes-128-ctr-tcp-none",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "fd47e9d863c3ee2de441bfa9851411766fbc962f808438ffca95f633b72af887",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "aes-128-ctr",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-aes-128-ctr-tcp-tls",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "74f97669addd565d5c89efc54dbabe782a167579d340af1ad9133e7c4ef0a187",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "aes-128-ctr",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-aes-128-ctr-ws-none",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "e9cb2c1a4f399c0d0d4c13c0146c5bffff775fe848522058951857d29f15cfff",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "aes-128-ctr",
+          "server": "server.example",
+          "server_port": 443,
+          "transport": {
+            "headers": {
+              "Host": "front.example"
+            },
+            "path": "/synthetic",
+            "type": "ws"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-aes-128-ctr-ws-tls",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "9688a082df6066d361684daa25f963df3dcf2c7e8b29365b9725c406afd7dba9",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "aes-128-ctr",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "transport": {
+            "headers": {
+              "Host": "front.example"
+            },
+            "path": "/synthetic",
+            "type": "ws"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-aes-128-ctr-grpc-none",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "b332c39226ca6777c64f58d61879670ae8bc5011f3cf2b473caf4a55d39fdd78",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "aes-128-ctr",
+          "server": "server.example",
+          "server_port": 443,
+          "transport": {
+            "service_name": "synthetic",
+            "type": "grpc"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "vmess-aes-128-ctr-grpc-tls",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "dcf5db892bec6ef1e078dfaa96c14dbb948343da535faf8d8231da68e2b59ef1",
+        "name": "synthetic",
+        "outbound": {
+          "alter_id": 0,
+          "security": "aes-128-ctr",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "transport": {
+            "service_name": "synthetic",
+            "type": "grpc"
+          },
+          "type": "vmess",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vmess",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-2022-blake3-aes-128-gcm-form1",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "dfbb5ef43a047fc5f9168c30bdf8f6ab7c60c8c6f8c4146c3cd26a9dd2b14ca2",
+        "name": "server.example",
+        "outbound": {
+          "method": "2022-blake3-aes-128-gcm",
+          "password": "AAAAAAAAAAAAAAAAAAAAAA==",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-2022-blake3-aes-128-gcm-form2",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "dfbb5ef43a047fc5f9168c30bdf8f6ab7c60c8c6f8c4146c3cd26a9dd2b14ca2",
+        "name": "server.example",
+        "outbound": {
+          "method": "2022-blake3-aes-128-gcm",
+          "password": "AAAAAAAAAAAAAAAAAAAAAA==",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-2022-blake3-aes-128-gcm-form3",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "dfbb5ef43a047fc5f9168c30bdf8f6ab7c60c8c6f8c4146c3cd26a9dd2b14ca2",
+        "name": "server.example",
+        "outbound": {
+          "method": "2022-blake3-aes-128-gcm",
+          "password": "AAAAAAAAAAAAAAAAAAAAAA==",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-2022-blake3-aes-256-gcm-form1",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "9c5a347a24c74ed2ce8253f22bf844d9ac0e10011e1702a4ec30432e6ccded8a",
+        "name": "server.example",
+        "outbound": {
+          "method": "2022-blake3-aes-256-gcm",
+          "password": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-2022-blake3-aes-256-gcm-form2",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "9c5a347a24c74ed2ce8253f22bf844d9ac0e10011e1702a4ec30432e6ccded8a",
+        "name": "server.example",
+        "outbound": {
+          "method": "2022-blake3-aes-256-gcm",
+          "password": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-2022-blake3-aes-256-gcm-form3",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "9c5a347a24c74ed2ce8253f22bf844d9ac0e10011e1702a4ec30432e6ccded8a",
+        "name": "server.example",
+        "outbound": {
+          "method": "2022-blake3-aes-256-gcm",
+          "password": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-2022-blake3-chacha20-poly1305-form1",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "e4841af476a3c7a337dd5d26219e48d50dc42d50b7027af2adb490d610bae8e9",
+        "name": "server.example",
+        "outbound": {
+          "method": "2022-blake3-chacha20-poly1305",
+          "password": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-2022-blake3-chacha20-poly1305-form2",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "e4841af476a3c7a337dd5d26219e48d50dc42d50b7027af2adb490d610bae8e9",
+        "name": "server.example",
+        "outbound": {
+          "method": "2022-blake3-chacha20-poly1305",
+          "password": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-2022-blake3-chacha20-poly1305-form3",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "e4841af476a3c7a337dd5d26219e48d50dc42d50b7027af2adb490d610bae8e9",
+        "name": "server.example",
+        "outbound": {
+          "method": "2022-blake3-chacha20-poly1305",
+          "password": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-none-form1",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "ca6137008d2c7a11286bd28eafa36a08d61439cec285dfdc572798b1d9324117",
+        "name": "server.example",
+        "outbound": {
+          "method": "none",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-none-form2",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "ca6137008d2c7a11286bd28eafa36a08d61439cec285dfdc572798b1d9324117",
+        "name": "server.example",
+        "outbound": {
+          "method": "none",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-none-form3",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "ca6137008d2c7a11286bd28eafa36a08d61439cec285dfdc572798b1d9324117",
+        "name": "server.example",
+        "outbound": {
+          "method": "none",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-128-gcm-form1",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "ac69ba808cacbc194ee3e6de16727bfef2959ba446a9edc0447bf11734f794b4",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-128-gcm",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-128-gcm-form2",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "ac69ba808cacbc194ee3e6de16727bfef2959ba446a9edc0447bf11734f794b4",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-128-gcm",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-128-gcm-form3",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "ac69ba808cacbc194ee3e6de16727bfef2959ba446a9edc0447bf11734f794b4",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-128-gcm",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-192-gcm-form1",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "465bc2edc6ffddc387635431a53d6c436daf89cfc075aace7831c26cfcaede8f",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-192-gcm",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-192-gcm-form2",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "465bc2edc6ffddc387635431a53d6c436daf89cfc075aace7831c26cfcaede8f",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-192-gcm",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-192-gcm-form3",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "465bc2edc6ffddc387635431a53d6c436daf89cfc075aace7831c26cfcaede8f",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-192-gcm",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-256-gcm-form1",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "7b5d590d8db07bd5b57130ff0b75d2321197c99edc2f038c350bd12248c5399d",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-256-gcm",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-256-gcm-form2",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "7b5d590d8db07bd5b57130ff0b75d2321197c99edc2f038c350bd12248c5399d",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-256-gcm",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-256-gcm-form3",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "7b5d590d8db07bd5b57130ff0b75d2321197c99edc2f038c350bd12248c5399d",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-256-gcm",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-chacha20-ietf-poly1305-form1",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "828579662ed4f10587bc62302d5deec7dbab24e02c35b48f9da997da6fc56585",
+        "name": "server.example",
+        "outbound": {
+          "method": "chacha20-ietf-poly1305",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-chacha20-ietf-poly1305-form2",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "828579662ed4f10587bc62302d5deec7dbab24e02c35b48f9da997da6fc56585",
+        "name": "server.example",
+        "outbound": {
+          "method": "chacha20-ietf-poly1305",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-chacha20-ietf-poly1305-form3",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "828579662ed4f10587bc62302d5deec7dbab24e02c35b48f9da997da6fc56585",
+        "name": "server.example",
+        "outbound": {
+          "method": "chacha20-ietf-poly1305",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-xchacha20-ietf-poly1305-form1",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "dfaebbeb883fec1f8242bccfae56cf23beefdd910a2689c74f6d5677e7552d5a",
+        "name": "server.example",
+        "outbound": {
+          "method": "xchacha20-ietf-poly1305",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-xchacha20-ietf-poly1305-form2",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "dfaebbeb883fec1f8242bccfae56cf23beefdd910a2689c74f6d5677e7552d5a",
+        "name": "server.example",
+        "outbound": {
+          "method": "xchacha20-ietf-poly1305",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-xchacha20-ietf-poly1305-form3",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "dfaebbeb883fec1f8242bccfae56cf23beefdd910a2689c74f6d5677e7552d5a",
+        "name": "server.example",
+        "outbound": {
+          "method": "xchacha20-ietf-poly1305",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-128-ctr-form1",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "2f9c8272b75e51ce04831ba5edcd189df567c747f37655527a60471e4f933f8d",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-128-ctr",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-128-ctr-form2",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "2f9c8272b75e51ce04831ba5edcd189df567c747f37655527a60471e4f933f8d",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-128-ctr",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-128-ctr-form3",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "2f9c8272b75e51ce04831ba5edcd189df567c747f37655527a60471e4f933f8d",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-128-ctr",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-192-ctr-form1",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "ae8af6ad232e3a62d749052b3072ef5b12e775c25f610d0de8e5bda808c3cbe9",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-192-ctr",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-192-ctr-form2",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "ae8af6ad232e3a62d749052b3072ef5b12e775c25f610d0de8e5bda808c3cbe9",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-192-ctr",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-192-ctr-form3",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "ae8af6ad232e3a62d749052b3072ef5b12e775c25f610d0de8e5bda808c3cbe9",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-192-ctr",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-256-ctr-form1",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "7816289e36837eb43217adbe7fda1549ddbe5a0bfdeb0f6da240ec39b71a9105",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-256-ctr",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-256-ctr-form2",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "7816289e36837eb43217adbe7fda1549ddbe5a0bfdeb0f6da240ec39b71a9105",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-256-ctr",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-256-ctr-form3",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "7816289e36837eb43217adbe7fda1549ddbe5a0bfdeb0f6da240ec39b71a9105",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-256-ctr",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-128-cfb-form1",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "10e8f5cc18247c82f6de55c4bbbbf11075d6565fe3273c4c01fd32aac9d4a89e",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-128-cfb",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-128-cfb-form2",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "10e8f5cc18247c82f6de55c4bbbbf11075d6565fe3273c4c01fd32aac9d4a89e",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-128-cfb",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-128-cfb-form3",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "10e8f5cc18247c82f6de55c4bbbbf11075d6565fe3273c4c01fd32aac9d4a89e",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-128-cfb",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-192-cfb-form1",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "7b43a0744cf0a6cee612f5b0d129a0d59780bddb94477db7f44b6b5edb494db8",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-192-cfb",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-192-cfb-form2",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "7b43a0744cf0a6cee612f5b0d129a0d59780bddb94477db7f44b6b5edb494db8",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-192-cfb",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-192-cfb-form3",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "7b43a0744cf0a6cee612f5b0d129a0d59780bddb94477db7f44b6b5edb494db8",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-192-cfb",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-256-cfb-form1",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "e2580744325035ad507a5a2ba9f3114f6e60e5859d062a44c54bd8be7c3337f3",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-256-cfb",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-256-cfb-form2",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "e2580744325035ad507a5a2ba9f3114f6e60e5859d062a44c54bd8be7c3337f3",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-256-cfb",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-aes-256-cfb-form3",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "e2580744325035ad507a5a2ba9f3114f6e60e5859d062a44c54bd8be7c3337f3",
+        "name": "server.example",
+        "outbound": {
+          "method": "aes-256-cfb",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-rc4-md5-form1",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "8459b01036d673031fdd97339151022da45475648ca1fe12481c6c73cbebb94e",
+        "name": "server.example",
+        "outbound": {
+          "method": "rc4-md5",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-rc4-md5-form2",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "8459b01036d673031fdd97339151022da45475648ca1fe12481c6c73cbebb94e",
+        "name": "server.example",
+        "outbound": {
+          "method": "rc4-md5",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-rc4-md5-form3",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "8459b01036d673031fdd97339151022da45475648ca1fe12481c6c73cbebb94e",
+        "name": "server.example",
+        "outbound": {
+          "method": "rc4-md5",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-chacha20-ietf-form1",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "50d1e2ab44d9d8e9fc90d0a26c757001166652be2d304d7b5ab1151488f8f8f1",
+        "name": "server.example",
+        "outbound": {
+          "method": "chacha20-ietf",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-chacha20-ietf-form2",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "50d1e2ab44d9d8e9fc90d0a26c757001166652be2d304d7b5ab1151488f8f8f1",
+        "name": "server.example",
+        "outbound": {
+          "method": "chacha20-ietf",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-chacha20-ietf-form3",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "50d1e2ab44d9d8e9fc90d0a26c757001166652be2d304d7b5ab1151488f8f8f1",
+        "name": "server.example",
+        "outbound": {
+          "method": "chacha20-ietf",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-xchacha20-form1",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "a1dd7fd87f8b6520619a35e0f42a99ae7f506e0cd35cfa7f366334b9fe2afa62",
+        "name": "server.example",
+        "outbound": {
+          "method": "xchacha20",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-xchacha20-form2",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "a1dd7fd87f8b6520619a35e0f42a99ae7f506e0cd35cfa7f366334b9fe2afa62",
+        "name": "server.example",
+        "outbound": {
+          "method": "xchacha20",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    },
+    {
+      "case_id": "ss-xchacha20-form3",
+      "server": {
+        "country": "",
+        "host": "server.example",
+        "id": "a1dd7fd87f8b6520619a35e0f42a99ae7f506e0cd35cfa7f366334b9fe2afa62",
+        "name": "server.example",
+        "outbound": {
+          "method": "xchacha20",
+          "password": "synthetic-password",
+          "server": "server.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      }
+    }
+  ],
+  "note": "captured before storage/parser migration; all data synthetic",
+  "profile": {
+    "format": "rift-profile",
+    "profile": {
+      "excluded": [
+        "|old.example:443"
+      ],
+      "routing": {
+        "block": [],
+        "direct": [
+          "domain:.ru",
+          "domain:.xn--p1ai",
+          "geosite:category-ru",
+          "10.0.0.0/8",
+          "172.16.0.0/12",
+          "192.168.0.0/16",
+          "169.254.0.0/16",
+          "224.0.0.0/4",
+          "255.255.255.255",
+          "fc00::/7",
+          "fe80::/10",
+          "ff00::/8"
+        ],
+        "order": [
+          "block",
+          "direct",
+          "proxy"
+        ],
+        "proxy": []
+      },
+      "selected": "26780766bb1db62626a6ac1ac326fcb8ff5a1d082675e9212a4004a7c48ac6b0",
+      "servers": [
+        {
+          "country": "",
+          "host": "server.example",
+          "id": "b4d04101b5f494ee39287324e2f49509b50f93debf5878b5f21575413525e031",
+          "name": "server.example",
+          "outbound": {
+            "password": "synthetic",
+            "server": "server.example",
+            "server_port": 443,
+            "tls": {
+              "enabled": true,
+              "server_name": "server.example"
+            },
+            "type": "trojan"
+          },
+          "port": 443,
+          "protocol": "trojan",
+          "source": null
+        },
+        {
+          "country": "",
+          "host": "legacy.example",
+          "id": "26780766bb1db62626a6ac1ac326fcb8ff5a1d082675e9212a4004a7c48ac6b0",
+          "name": "legacy.example",
+          "outbound": {
+            "method": "aes-128-cfb",
+            "password": "synthetic",
+            "server": "legacy.example",
+            "server_port": 443,
+            "type": "shadowsocks"
+          },
+          "port": 443,
+          "protocol": "shadowsocks",
+          "source": null
+        },
+        {
+          "country": "",
+          "host": "old.example",
+          "id": "39b7df3e0b199f3535428f5d951b53e363ccda9f27a7b97f979a74399700ac41",
+          "name": "old.example",
+          "outbound": {
+            "server": "old.example",
+            "server_port": 443,
+            "tls": {
+              "enabled": true,
+              "reality": {
+                "enabled": true,
+                "public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                "short_id": "ab12"
+              },
+              "server_name": "old.example",
+              "utls": {
+                "enabled": true,
+                "fingerprint": "chrome"
+              }
+            },
+            "transport": {
+              "path": "/synthetic",
+              "type": "ws"
+            },
+            "type": "vless",
+            "uuid": "11111111-1111-4111-8111-111111111111"
+          },
+          "port": 443,
+          "protocol": "vless reality",
+          "source": null
+        }
+      ],
+      "servers_sort": {
+        "column": "name",
+        "descending": false
+      },
+      "settings": {
+        "api_port": 2081,
+        "auto_connect": false,
+        "auto_select": true,
+        "autostart": false,
+        "concurrency": 3,
+        "connectivity_url": "https://www.gstatic.com/generate_204",
+        "degrade_cap_ms": 1500,
+        "degrade_percent": 50,
+        "endpoint_timeout_ms": 1500,
+        "find_process": false,
+        "full_interval_mins": 10,
+        "geodata_auto_update": true,
+        "interval_secs": 60,
+        "mode": "proxy",
+        "pool_size": 3,
+        "proxy_port": 2080,
+        "proxy_timeout_ms": 5000,
+        "send_error_reports": true,
+        "subscription_interval_mins": 60,
+        "switch_threshold_ms": 50,
+        "switch_threshold_percent": 30,
+        "theme": "system"
+      },
+      "subscriptions": [],
+      "version": 1,
+      "welcome_dismissed": false
+    },
+    "version": 1
+  },
+  "state": {
+    "excluded": [
+      "|old.example:443"
+    ],
+    "routing": {
+      "block": [],
+      "direct": [
+        "domain:.ru",
+        "domain:.xn--p1ai",
+        "geosite:category-ru",
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "192.168.0.0/16",
+        "169.254.0.0/16",
+        "224.0.0.0/4",
+        "255.255.255.255",
+        "fc00::/7",
+        "fe80::/10",
+        "ff00::/8"
+      ],
+      "order": [
+        "block",
+        "direct",
+        "proxy"
+      ],
+      "proxy": []
+    },
+    "selected": "26780766bb1db62626a6ac1ac326fcb8ff5a1d082675e9212a4004a7c48ac6b0",
+    "servers": [
+      {
+        "country": "",
+        "host": "server.example",
+        "id": "b4d04101b5f494ee39287324e2f49509b50f93debf5878b5f21575413525e031",
+        "name": "server.example",
+        "outbound": {
+          "password": "synthetic",
+          "server": "server.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "server_name": "server.example"
+          },
+          "type": "trojan"
+        },
+        "port": 443,
+        "protocol": "trojan",
+        "source": null
+      },
+      {
+        "country": "",
+        "host": "legacy.example",
+        "id": "26780766bb1db62626a6ac1ac326fcb8ff5a1d082675e9212a4004a7c48ac6b0",
+        "name": "legacy.example",
+        "outbound": {
+          "method": "aes-128-cfb",
+          "password": "synthetic",
+          "server": "legacy.example",
+          "server_port": 443,
+          "type": "shadowsocks"
+        },
+        "port": 443,
+        "protocol": "shadowsocks",
+        "source": null
+      },
+      {
+        "country": "",
+        "host": "old.example",
+        "id": "39b7df3e0b199f3535428f5d951b53e363ccda9f27a7b97f979a74399700ac41",
+        "name": "old.example",
+        "outbound": {
+          "server": "old.example",
+          "server_port": 443,
+          "tls": {
+            "enabled": true,
+            "reality": {
+              "enabled": true,
+              "public_key": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "short_id": "ab12"
+            },
+            "server_name": "old.example",
+            "utls": {
+              "enabled": true,
+              "fingerprint": "chrome"
+            }
+          },
+          "transport": {
+            "path": "/synthetic",
+            "type": "ws"
+          },
+          "type": "vless",
+          "uuid": "11111111-1111-4111-8111-111111111111"
+        },
+        "port": 443,
+        "protocol": "vless reality",
+        "source": null
+      }
+    ],
+    "servers_sort": {
+      "column": "name",
+      "descending": false
+    },
+    "settings": {
+      "api_port": 2081,
+      "auto_connect": false,
+      "auto_select": true,
+      "autostart": false,
+      "concurrency": 3,
+      "connectivity_url": "https://www.gstatic.com/generate_204",
+      "degrade_cap_ms": 1500,
+      "degrade_percent": 50,
+      "endpoint_timeout_ms": 1500,
+      "find_process": false,
+      "full_interval_mins": 10,
+      "geodata_auto_update": true,
+      "interval_secs": 60,
+      "mode": "proxy",
+      "pool_size": 3,
+      "proxy_port": 2080,
+      "proxy_timeout_ms": 5000,
+      "send_error_reports": true,
+      "subscription_interval_mins": 60,
+      "switch_threshold_ms": 50,
+      "switch_threshold_percent": 30,
+      "theme": "system"
+    },
+    "subscriptions": [],
+    "version": 1,
+    "welcome_dismissed": false
+  }
+}

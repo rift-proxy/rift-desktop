@@ -1,0 +1,10 @@
+{
+  "name": "rift-security-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Locked Retire.js and SPDX tools used by public security checks",
+  "dependencies": {
+    "retire": "6.1.1",
+    "spdx-expression-parse": "5.0.0"
+  }
+}

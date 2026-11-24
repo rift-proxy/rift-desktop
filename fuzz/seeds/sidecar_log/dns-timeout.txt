@@ -1,0 +1,1 @@
++0300 2026-10-19 17:09:42 ERROR [3118982087 10.1s] connection: open connection to ya.ru:443 using outbound/direct[direct]: lookup ya.ru: (exchange4: dial udp 8.8.4.4:53: i/o timeout)

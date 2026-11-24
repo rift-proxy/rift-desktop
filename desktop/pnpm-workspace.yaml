@@ -1,0 +1,19 @@
+onlyBuiltDependencies:
+  - esbuild
+overrides:
+  # GHSA-4mjr-xmp4-gh2g, GHSA-q8mj-m7cp-5q26, GHSA-x5fp-wj9c-mxmx, GHSA-6pq8-jhm2-2vcw; dev-only via
+  # @stryker-mutator/core > typed-rest-client.
+  qs@<6.16.1: ^6.16.1
+  # GHSA-68fv-2mgg-jv7q; used by jsdom, magicast and postcss in test/build tooling.
+  source-map-js@<1.2.2: 1.2.2
+  # GHSA-333x-w4r6-6crp, GHSA-w74x-v6f9-j3xg, GHSA-wjr9-j795-jxcr, GHSA-xhq7-xmqj-769h; dev-only
+  # via @stryker-mutator/core > ajv.
+  fast-uri@<3.1.9: ^3.1.9
+  # GHSA-4qv8-2p9j-2685, GHSA-f72v-6w45-q472, GHSA-xjj6-f33q-929c; test tooling only via jsdom.
+  undici@<7.30.1: ^7.30.1
+  # GHSA-mrhx-c7xc-m3w5; dev-only via @stryker-mutator/core > mutation-server-protocol.
+  zod@<4.6.6: ^4.6.6
+  # GHSA-3g3m-2fjr-6pw4; Storybook docgen traversal cancellation.
+  glob@>=9.0.0 <14.0.2: 14.0.2
+  # GHSA-g3hv-75wg-m249; ESLint, typescript-eslint and Stryker tooling.
+  minimatch@>=10.0.0 <11.0.1: 11.0.1

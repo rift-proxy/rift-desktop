@@ -1,0 +1,1 @@
+ERROR[0000] using outbound/vless[28c6ff378ad0abce958033c7b52f9e948e21c6a6abe50c0a1812e2ba0706408a]: read tcp 10.0.0.2:5000->1.2.3.4:443: EOF

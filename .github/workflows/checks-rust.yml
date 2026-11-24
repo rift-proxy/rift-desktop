@@ -1,0 +1,193 @@
+name: Public Rust checks
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+      full:
+        type: boolean
+        default: false
+permissions:
+  contents: read
+env:
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
+  CARGO_INCREMENTAL: '0'
+  CARGO_BUILD_JOBS: '2'
+jobs:
+  core:
+    name: 3-8 Rust source and real bundled assets
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: 1.98.1
+          components: rustfmt,clippy
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.18.0
+      - name: 3 cargo fmt
+        run: cargo fmt --all -- --check
+      - name: 4 cargo clippy
+        run: cargo clippy -p rift-core --all-targets --locked -- -D warnings
+      - name: 5 cargo build rift-core
+        run: cargo build -p rift-core --locked
+      - name: 6 download and verify pinned Linux cores
+        run: node tooling/sidecar.mjs linux
+      - name: 7 sing-box configuration smoke
+        run: cargo run -p rift-core --locked --example config_smoke -- desktop/src-tauri/binaries/sing-box-x86_64-unknown-linux-gnu
+      - name: 8 bundled sidecar integration
+        run: cargo test -p rift-core --locked --test sidecar -- --ignored
+  dependency-policy:
+    name: 29 deny and 31 unused dependencies
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: 1.98.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.18.0
+      - name: Install pinned policy tools
+        run: |
+          set -euo pipefail
+          cargo install cargo-deny --locked --version 0.20.2
+          cargo install cargo-machete --locked --version 0.9.2
+      - name: 29 cargo deny both dependency graphs
+        run: |
+          set -euo pipefail
+          cargo deny --manifest-path Cargo.toml check
+          cargo deny --manifest-path fuzz/Cargo.toml --config deny.toml check
+      - name: 31 cargo machete
+        run: cargo machete --skip-target-dir .
+  coverage:
+    name: 33 full core tests and 34 coverage in one run
+    permissions:
+      contents: read
+    if: inputs.full
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: 1.98.1
+          components: llvm-tools-preview
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.18.0
+      - run: cargo install cargo-llvm-cov --locked --version 0.9.1
+      - run: node tooling/sidecar.mjs linux
+      # All library/integration scenarios run once; core currently has no doctest cases.
+      # The explicit ignored sidecar tests are check 8 and already execute in the PR group.
+      - run: |
+          set -euo pipefail
+          mkdir -p reports
+          cargo llvm-cov -p rift-core --locked --json --summary-only --output-path reports/rust-coverage-raw.json
+          node tooling/coverage-summary.mjs reports/rust-coverage-raw.json reports/rust-coverage.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: rust-coverage
+          path: reports/rust-coverage.json
+          retention-days: 7
+          if-no-files-found: error
+  mutation:
+    name: 35 selection mutation
+    permissions:
+      contents: read
+    if: inputs.full
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    env:
+      CARGO_BUILD_JOBS: '1'
+      # A single tree/build at a time and no incremental cache keep hosted disk use bounded.
+      CARGO_PROFILE_DEV_DEBUG: line-tables-only
+      CARGO_PROFILE_TEST_DEBUG: line-tables-only
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: 1.98.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.18.0
+      - run: cargo install cargo-mutants --locked --version 27.1.0
+      - name: Free unused hosted SDKs before isolated mutation builds
+        run: |
+          set -euo pipefail
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h .
+      - name: Mutate selection with one worker and scoped reaching tests
+        env:
+          TMPDIR: ${{ runner.temp }}/selection-mutants
+        run: |
+          set -euo pipefail
+          mkdir -p "$TMPDIR"
+          cargo mutants -p rift-core -C --locked -f core/src/selection.rs --timeout 120 --build-timeout 900 --jobs 1 --jobserver-tasks 1 -- --lib --test selection --test selection_stability --test selection_pace --test failover --test history --test application --test application_actions --test schedule --test selection_pool --test application_fast
+      - name: Retain numeric mutation outcomes only
+        if: always()
+        run: node tooling/mutation-summary.mjs mutants.out/outcomes.json reports/mutation-summary.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: rust-selection-mutation
+          path: reports/mutation-summary.json
+          retention-days: 7
+          if-no-files-found: error
+  fuzz-replay:
+    name: 40 permanent fuzz regression replay
+    permissions:
+      contents: read
+    if: inputs.full
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      CARGO_BUILD_JOBS: '1'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: nightly-2026-11-14
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.18.0
+      - run: cargo install cargo-fuzz --locked --version 0.13.2
+      - name: Build all permanent targets and replay seeds and regressions without mutation
+        working-directory: fuzz
+        run: |
+          set -euo pipefail
+          # cargo-fuzz 0.13.2 has no --locked flag. Resolve through Cargo first,
+          # then forbid network resolution and reject any lockfile rewrite.
+          cargo fetch --locked
+          sha256sum Cargo.lock > "$RUNNER_TEMP/fuzz-lock.sha256"
+          export CARGO_NET_OFFLINE=true
+          cargo fuzz build
+          sha256sum --check "$RUNNER_TEMP/fuzz-lock.sha256"
+          source ../tooling/fuzz-targets.sh
+          fuzz_replay_targets
+          sha256sum --check "$RUNNER_TEMP/fuzz-lock.sha256"

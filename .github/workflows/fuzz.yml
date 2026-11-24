@@ -1,0 +1,84 @@
+name: Fuzz
+on:
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: Seconds per target (1–900)
+        default: '300'
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: fuzz-${{ github.ref }}
+  # Finish the current search; keep at most one pending manual run per ref.
+  cancel-in-progress: false
+jobs:
+  fuzz:
+    name: Fuzz ${{ matrix.target }}
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [subscription, persisted_state, ipc_payload, clash_api, helper_frame, dns_query, sidecar_log, journal_details]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: nightly-2026-11-14
+      - name: Install pinned cargo-fuzz and build with checked lock discipline
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          cargo install cargo-fuzz --locked --version 0.13.2
+          cd fuzz
+          cargo fetch --locked
+          sha256sum Cargo.lock > "$RUNNER_TEMP/fuzz-lock.sha256"
+          CARGO_NET_OFFLINE=true cargo fuzz build "$TARGET"
+          sha256sum --check "$RUNNER_TEMP/fuzz-lock.sha256"
+      - name: Fuzz ${{ matrix.target }}
+        id: search
+        env:
+          TARGET: ${{ matrix.target }}
+          SECONDS_PER_TARGET: ${{ inputs.seconds || '300' }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$SECONDS_PER_TARGET" =~ ^[1-9][0-9]{0,2}$ ]] || (( SECONDS_PER_TARGET > 900 )); then
+            echo 'seconds must be an integer from 1 to 900' >&2
+            exit 1
+          fi
+          cd fuzz
+          mkdir -p "corpus/$TARGET"
+          inputs=("corpus/$TARGET" "seeds/$TARGET")
+          if [ -d "regressions/$TARGET" ]; then inputs+=("regressions/$TARGET"); fi
+          CARGO_NET_OFFLINE=true cargo fuzz run "$TARGET" "${inputs[@]}" -- -max_total_time="$SECONDS_PER_TARGET" -max_len=65536
+          sha256sum --check "$RUNNER_TEMP/fuzz-lock.sha256"
+      # Crash bytes and libFuzzer output are public. Use only synthetic seed inputs.
+      - name: Archive failing inputs for public plaintext retention
+        id: crashes
+        if: ${{ failure() && steps.search.outcome == 'failure' }}
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+          if [ ! -d "fuzz/artifacts/$TARGET" ] || [ -z "$(find "fuzz/artifacts/$TARGET" -type f -print -quit)" ]; then
+            exit 0
+          fi
+          tar -cf "$RUNNER_TEMP/fuzz-crashes.tar" -C fuzz/artifacts -- "$TARGET"
+          printf 'saved=true\n' >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: ${{ failure() && steps.crashes.outputs.saved == 'true' }}
+        with:
+          name: fuzz-crashes-${{ matrix.target }}
+          path: ${{ runner.temp }}/fuzz-crashes.tar
+          retention-days: 30
+          if-no-files-found: error

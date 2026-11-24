@@ -1,0 +1,49 @@
+name: CodeQL
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+      full:
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  analyze:
+    name: CodeQL ${{ matrix.language }}
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write # Upload the analysis SARIF to repository code scanning.
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [rust, javascript-typescript]
+    steps:
+      - name: Require the exact trusted manual dev source before SARIF access
+        env:
+          FULL: ${{ inputs.full }}
+          SOURCE_SHA: ${{ inputs.ref }}
+        run: |
+          node --input-type=module <<'NODE'
+          if (process.env.FULL !== 'true' || process.env.GITHUB_EVENT_NAME !== 'workflow_dispatch' || process.env.GITHUB_REF !== 'refs/heads/dev' || !/^[a-f0-9]{40}$/.test(process.env.SOURCE_SHA) || process.env.SOURCE_SHA !== process.env.GITHUB_SHA) throw new Error('CodeQL is only available to the full manual dev Quality run');
+          NODE
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      # Current CodeQL supports both language identifiers and Rust build-mode:none.
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4
+        with:
+          category: /language:${{ matrix.language }}
+          upload: always

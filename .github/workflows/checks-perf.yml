@@ -1,0 +1,208 @@
+name: Public performance checks
+on:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+      full:
+        type: boolean
+        default: false
+      baseline_ref:
+        type: string
+        required: true
+permissions:
+  contents: read
+env:
+  CARGO_INCREMENTAL: '0'
+  CARGO_BUILD_JOBS: '2'
+jobs:
+  callgrind:
+    name: 27 Gungraun with independently built immutable baseline
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ inputs.ref }}
+          path: source
+          persist-credentials: false
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ inputs.baseline_ref }}
+          path: baseline
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: 1.98.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.18.0
+      - name: Install identical measurement tools for both trees
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends valgrind
+          cargo install gungraun-runner --locked --version 0.19.4
+      # Separate target directories prevent Cargo from reusing the wrong tree's compiled objects.
+      # Neither measurement has a cache baseline; the final comparator requires both inventories.
+      - name: Build and measure baseline with the fixed empty feature set
+        working-directory: baseline
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/gungraun-baseline-target
+          GUNGRAUN_HOME: ${{ github.workspace }}/source/reports/perf/gungraun/baseline
+        run: cargo bench -p rift-core --bench core_gungraun --locked --no-default-features -- --save-summary=json --allow-aslr=true
+      - name: Release baseline build disk before building source
+        run: rm -rf "$RUNNER_TEMP/gungraun-baseline-target"
+      - name: Build and measure source with identical tools and features
+        working-directory: source
+        env:
+          CARGO_TARGET_DIR: ${{ runner.temp }}/gungraun-source-target
+          GUNGRAUN_HOME: ${{ github.workspace }}/source/reports/perf/gungraun/current
+        run: cargo bench -p rift-core --bench core_gungraun --locked --no-default-features -- --save-summary=json --allow-aslr=true
+      - name: Require compatible inventories and gate instruction growth above 10 percent
+        working-directory: source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tooling/perf/gungraun-compare.mjs reports/perf/gungraun/baseline reports/perf/gungraun/current | tee reports/perf/gungraun-comparison.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: perf-callgrind
+          path: source/reports/perf/gungraun-comparison.json
+          retention-days: 7
+          if-no-files-found: error
+  code-size:
+    name: 28 cargo-bloat and llvm-lines reports
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: 1.98.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.18.0
+      - name: Install pinned report tools
+        run: |
+          set -euo pipefail
+          cargo install cargo-bloat --locked --version 0.12.1
+          cargo install cargo-llvm-lines --locked --version 0.4.45
+      - name: Report native workload machine-code composition and library LLVM IR
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/perf/bloat
+          cargo bloat --release -p rift-core --example perf_workload --locked --crates -n 20 | tee reports/perf/bloat/crates.txt
+          cargo llvm-lines --release -p rift-core --lib --locked | tee reports/perf/bloat/llvm-lines.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: perf-code-size
+          path: reports/perf/bloat
+          retention-days: 7
+          if-no-files-found: error
+  criterion:
+    name: 36 Criterion synthetic-workload report
+    permissions:
+      contents: read
+    if: inputs.full
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: 1.98.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.18.0
+      - run: cargo bench -p rift-core --bench core --locked -- --quick --noplot
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: perf-criterion
+          path: target/criterion
+          retention-days: 7
+          if-no-files-found: error
+  profiling:
+    name: 37 Samply and 38 Heaptrack on one profiling binary
+    permissions:
+      contents: read
+    if: inputs.full
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@df2a88e9fe4098bad09cb42c3dec7187f15861fc
+        with:
+          toolchain: 1.98.1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24.18.0
+      - name: Install pinned sampler and system allocator profiler
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends heaptrack
+          cargo install samply --locked --version 0.13.1
+      - name: Configure this disposable hosted runner for CPU sampling
+        run: |
+          set -euo pipefail
+          sudo sysctl -w kernel.perf_event_paranoid=1
+          sudo sysctl -w kernel.perf_event_mlock_kb=16384
+      - name: Build shared optimized profiling workload once
+        run: cargo build --profile profiling -p rift-core --example perf_workload --locked
+      - name: 37 sample CPU and summarize synthetic workload
+        shell: bash
+        env:
+          RIFT_PERF_ROUNDS: '50'
+        run: |
+          set -euo pipefail
+          mkdir -p reports/perf/samply
+          samply record --save-only --no-open --unstable-presymbolicate -o reports/perf/samply/profile.json.gz -- target/profiling/examples/perf_workload
+          node tooling/cpu-profile-summary.mjs reports/perf/samply/profile.json.gz | tee reports/perf/samply/summary.txt
+      - name: 38 exact Heaptrack leak growth from 1 to 50 rounds
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p reports/perf/heaptrack
+          RIFT_PERF_ROUNDS=1 heaptrack -o reports/perf/heaptrack/one target/profiling/examples/perf_workload
+          RIFT_PERF_ROUNDS=50 heaptrack -o reports/perf/heaptrack/fifty target/profiling/examples/perf_workload
+          # Heaptrack uses zstd when available, otherwise gzip; both carry exact data.
+          shopt -s nullglob
+          one=(reports/perf/heaptrack/one.*)
+          fifty=(reports/perf/heaptrack/fifty.*)
+          if [[ "${#one[@]}" -ne 1 || "${#fifty[@]}" -ne 1 ]]; then
+            echo "Expected exactly one nonempty Heaptrack capture per workload" >&2
+            exit 1
+          fi
+          test -s "${one[0]}" && test -s "${fifty[0]}"
+          heaptrack_print -f "${one[0]}" -n 10 -s 3 > reports/perf/heaptrack/one-report.txt
+          heaptrack_print -f "${fifty[0]}" -n 10 -s 3 > reports/perf/heaptrack/fifty-report.txt
+          heaptrack_print -f "${one[0]}" -a 0 -p 0 -t 0 -T 0 -l 0 --flamegraph-cost-type leaked -F reports/perf/heaptrack/one-leaked.txt
+          heaptrack_print -f "${fifty[0]}" -a 0 -p 0 -t 0 -T 0 -l 0 --flamegraph-cost-type leaked -F reports/perf/heaptrack/fifty-leaked.txt
+          node tooling/perf/heaptrack-growth.mjs reports/perf/heaptrack/one-leaked.txt reports/perf/heaptrack/fifty-leaked.txt | tee reports/perf/heaptrack/growth.txt
+      # Raw profiles, binaries and symbol sidecars are not public artifacts by default.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: perf-profiling-summaries
+          path: |
+            reports/perf/samply/summary.txt
+            reports/perf/heaptrack/growth.txt
+          retention-days: 7
+          if-no-files-found: error
