@@ -8,5 +8,6 @@ const config: StorybookConfig = {
   ],
   framework: "@storybook/react-vite",
   core: { disableTelemetry: true },
+  viteFinal: (viteConfig) => ({ ...viteConfig, envDir: false }),
 };
 export default config;

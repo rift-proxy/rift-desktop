@@ -1,7 +1,7 @@
 #!/bin/sh
 # Entry point of build.Dockerfile. Reads a tar of the source tree on stdin, builds the Windows
 # installer and leaves the results in /out. The updater signing key and endpoint
-# arrive as environment variables or as a read-only /run/rift-build/.env, never in the image.
+# arrive only as environment variables, never in the image or a configuration file.
 # Dependency install scripts and downloads run without them: they are given to the build itself.
 set -eu
 
@@ -42,18 +42,11 @@ cd /work
 without_secrets cargo fetch --locked --target x86_64-pc-windows-msvc --manifest-path /work/Cargo.toml
 without_secrets node tooling/sidecar.mjs windows
 
-# build.rs reads the endpoint from .env next to Cargo.toml; the file appears only for the build and is
-# removed however the build ends.
-trap 'rm -f /work/.env' EXIT
-if [ -f /run/rift-build/.env ]; then
-  cp /run/rift-build/.env /work/.env
-fi
 release=target/x86_64-pc-windows-msvc/release
 # The target volume survives between builds: installers and signatures of earlier builds must not
 # be taken for this one.
 rm -rf "/work/$release/bundle"
 node tooling/tauri-build.mjs --runner cargo-xwin --target x86_64-pc-windows-msvc --bundles nsis
-rm -f /work/.env
 
 rm -rf /out/bundle/nsis /out/rift-desktop.exe /out/frontend /out/build-manifest.json
 mkdir -p /out/bundle

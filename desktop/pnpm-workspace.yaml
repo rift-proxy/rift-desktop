@@ -1,3 +1,6 @@
+# Storybook 10.6.3 has no dotenv opt-out; retain its process-only env/prefix handling.
+patchedDependencies:
+  storybook@10.6.3: patches/storybook@10.6.3.patch
 onlyBuiltDependencies:
   - esbuild
 overrides:

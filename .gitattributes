@@ -1,2 +1,6 @@
 # Preserve hash-checked fixtures and source bytes on Windows checkouts too.
 * text=auto eol=lf
+
+# Never archive environment inputs, even if they were force-added to Git.
+.env export-ignore
+.env.* export-ignore

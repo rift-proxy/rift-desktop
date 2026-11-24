@@ -25,6 +25,7 @@ export function pnpmStoreDir(
 
 const pnpmStore = pnpmStoreDir();
 export default defineConfig({
+  envDir: false,
   test: {
     coverage: {
       provider: "v8",
@@ -40,6 +41,7 @@ export default defineConfig({
     },
     projects: [
       {
+        envDir: false,
         plugins: [react(), yamlCatalog()],
         test: {
           name: "unit",
@@ -52,6 +54,7 @@ export default defineConfig({
         },
       },
       {
+        envDir: false,
         plugins: [
           storybookTest({
             configDir: path.resolve(import.meta.dirname, ".storybook"),

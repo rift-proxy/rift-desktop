@@ -51,9 +51,6 @@ export const FORWARDED_ENV = [
   "TAURI_SIGNING_PRIVATE_KEY_PASSWORD",
 ];
 export const RELEASE_BUNDLE_CONFIG = "src-tauri/tauri.release.conf.json";
-/** Where `.env` is mounted: outside /work, so install scripts of dependencies do not see it; the
- * entry point copies it into place only for the build itself. */
-export const SECRETS_ENV_FILE = "/run/rift-build/.env";
 /** Standard proxy variables, forwarded by name like the secrets (a proxy URL may carry a login). */
 export const PROXY_URL_ENV = [
   "HTTP_PROXY",
@@ -155,7 +152,7 @@ export function imageBuildArgs({ uid, gid, rebuild }) {
   ];
 }
 
-export function runArgs({ out, rootDir, release, env, hasDotEnv, commit }) {
+export function runArgs({ out, release, env, commit }) {
   return [
     "run",
     "--rm",
@@ -170,9 +167,6 @@ export function runArgs({ out, rootDir, release, env, hasDotEnv, commit }) {
     ...CACHE_VOLUMES.flatMap(([name, target]) => ["--volume", `${name}:${target}`]),
     "--volume",
     `${out}:/out`,
-    ...(hasDotEnv
-      ? ["--volume", `${path.join(rootDir, ".env")}:${SECRETS_ENV_FILE}:ro`]
-      : []),
     ...FORWARDED_ENV.filter((name) => env[name] !== undefined).flatMap((name) => [
       "--env",
       name,
@@ -344,10 +338,8 @@ export async function main(argv) {
     plan.source,
     runArgs({
       out,
-      rootDir: root,
       release: options.release,
       env: process.env,
-      hasDotEnv: existsSync(path.join(root, ".env")),
       commit,
     }),
   );

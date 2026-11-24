@@ -1,32 +1,5 @@
 use std::path::Path;
 
-/// Reads only the updater key from the project's build-time `.env`.
-fn dotenv_endpoint(text: &str) -> Option<String> {
-    text.lines()
-        .filter_map(|line| {
-            let line = line.trim().strip_prefix("export ").unwrap_or(line.trim());
-            let (key, value) = line.split_once('=')?;
-            if key.trim() != "RIFT_UPDATE_ENDPOINT" {
-                return None;
-            }
-            let value = value
-                .trim()
-                .split_once(" #")
-                .map_or(value.trim(), |(value, _)| value.trim())
-                .trim_matches(['"', '\'']);
-            Some(value.to_owned())
-        })
-        .next_back()
-}
-
-fn endpoint_from(
-    environment: Option<String>,
-    read_dotenv: impl FnOnce() -> Option<String>,
-) -> Result<Option<String>, &'static str> {
-    // Even an explicit blank wins, without reading the file.
-    update_endpoint(environment.or_else(read_dotenv))
-}
-
 /// The twelve leading digits of the explicit full build commit, if valid.
 fn short_commit(value: Option<&str>) -> Option<String> {
     let commit = value?.trim();
@@ -84,15 +57,8 @@ fn main() {
     }
     println!("cargo:rerun-if-env-changed=RIFT_UPDATE_ENDPOINT");
     println!("cargo:rerun-if-env-changed=RIFT_BUILD_COMMIT");
-    let root = Path::new(&std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("../..");
-    let env_file = root.join(".env");
-    println!("cargo:rerun-if-changed={}", env_file.display());
-    let endpoint = endpoint_from(std::env::var("RIFT_UPDATE_ENDPOINT").ok(), || {
-        std::fs::read_to_string(&env_file)
-            .ok()
-            .and_then(|text| dotenv_endpoint(&text))
-    })
-    .unwrap_or_else(|message| panic!("{message}"));
+    let endpoint = update_endpoint(std::env::var("RIFT_UPDATE_ENDPOINT").ok())
+        .unwrap_or_else(|message| panic!("{message}"));
     let out_dir = std::env::var_os("OUT_DIR").expect("OUT_DIR is not set");
     let out_dir = Path::new(&out_dir);
     write_const(
@@ -112,9 +78,7 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        const_decl, dotenv_endpoint, endpoint_from, native_link_arg, short_commit, update_endpoint,
-    };
+    use super::{const_decl, native_link_arg, short_commit, update_endpoint};
 
     #[test]
     fn msvc_release_disables_pdb_without_changing_debug_or_non_msvc_builds() {
@@ -136,40 +100,10 @@ mod tests {
     #[test]
     fn updater_is_off_without_an_explicit_endpoint() {
         assert_eq!(update_endpoint(None).unwrap(), None);
+        assert_eq!(update_endpoint(Some(String::new())).unwrap(), None);
         assert_eq!(update_endpoint(Some("  ".into())).unwrap(), None);
     }
 
-    #[test]
-    fn endpoint_environment_wins_including_explicit_blank() {
-        for value in ["", "  ", "https://environment.example/latest.json"] {
-            assert_eq!(
-                endpoint_from(Some(value.into()), || panic!("environment wins")).unwrap(),
-                update_endpoint(Some(value.into())).unwrap()
-            );
-        }
-        assert_eq!(endpoint_from(None, || None).unwrap(), None);
-        assert!(endpoint_from(None, || Some("http://bad.example/latest.json".into())).is_err());
-    }
-
-    #[test]
-    fn endpoint_falls_back_to_common_dotenv_forms_and_last_assignment() {
-        let text = r#"
-            OTHER_KEY=ignored
-            RIFT_UPDATE_ENDPOINT = "https://first.example/latest.json"
-            export RIFT_UPDATE_ENDPOINT='https://second.example/latest.json' # release
-        "#;
-        assert_eq!(
-            endpoint_from(None, || dotenv_endpoint(text))
-                .unwrap()
-                .as_deref(),
-            Some("https://second.example/latest.json")
-        );
-        assert_eq!(dotenv_endpoint("OTHER_KEY=ignored"), None);
-        assert_eq!(
-            endpoint_from(None, || dotenv_endpoint("RIFT_UPDATE_ENDPOINT=")).unwrap(),
-            None
-        );
-    }
     #[test]
     fn updater_accepts_only_the_single_https_feed() {
         assert_eq!(

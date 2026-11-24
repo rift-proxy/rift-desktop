@@ -14,7 +14,6 @@ import {
   IMAGE,
   OUTPUT_ENTRIES,
   RELEASE_BUNDLE_CONFIG,
-  SECRETS_ENV_FILE,
   archiveCommand,
   archivePlan,
   assertOutputUsable,
@@ -33,10 +32,8 @@ import {
 const COMMIT = "c".repeat(40);
 const run = (overrides = {}) => ({
   out: "/o",
-  rootDir: "/a",
   release: false,
   env: {},
-  hasDotEnv: false,
   commit: COMMIT,
   ...overrides,
 });
@@ -102,21 +99,24 @@ test("the container is unprivileged and mounts caches, the output and nothing fr
   assert.ok(!args.some((arg) => arg.includes("/a:") || arg === "/a"));
 });
 
-test("secrets are forwarded by name only, and .env is mounted read-only when present", () => {
+test("secrets are forwarded only by environment name, with no file inputs", () => {
   const env = {
+    RIFT_UPDATE_ENDPOINT: "https://updates.example.invalid/latest.json",
     TAURI_SIGNING_PRIVATE_KEY: "key-material",
-    UNRELATED: "x",
+    TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "key-password",
+    UNRELATED: "unrelated-value",
   };
-  const args = runArgs(run({ env, hasDotEnv: true }));
-  assert.ok(args.includes("TAURI_SIGNING_PRIVATE_KEY"));
-  assert.ok(!args.includes("RIFT_UPDATE_ENDPOINT"), "unset variables are not forwarded");
+  const args = runArgs(run({ env }));
+  const forwarded = args.flatMap((arg, i) => (args[i - 1] === "--env" ? [arg] : []));
+  assert.deepEqual(forwarded, [...FORWARDED_ENV, `RIFT_BUILD_COMMIT=${COMMIT}`]);
+  for (const value of Object.values(env)) assert.ok(!args.some((arg) => arg.includes(value)));
   assert.ok(!args.includes("UNRELATED"));
-  assert.ok(!args.join(" ").includes("key-material"));
-  // Mounted outside /work: install scripts of dependencies must not see it.
-  assert.ok(args.includes(`${path.join("/a", ".env")}:${SECRETS_ENV_FILE}:ro`));
-  assert.ok(!SECRETS_ENV_FILE.startsWith("/work"));
-  assert.ok(FORWARDED_ENV.includes("TAURI_SIGNING_PRIVATE_KEY_PASSWORD"));
-  assert.ok(!runArgs(run({ env })).join(" ").includes(".env"));
+  assert.ok(!runArgs(run()).includes("RIFT_UPDATE_ENDPOINT"), "unset variables are not forwarded");
+  assert.deepEqual(
+    args.flatMap((arg, i) => (args[i - 1] === "--volume" ? [arg] : [])),
+    [...CACHE_VOLUMES.map(([name, target]) => `${name}:${target}`), "/o:/out"],
+  );
+  assert.ok(!args.includes("--env-file"));
 });
 
 test("the release bundle config is merged only for --release", () => {
@@ -192,6 +192,52 @@ test("git archive of a subdirectory is not empty, nested or when the project is 
     assert.deepEqual(listing("project/", dir, path.join(dir, "project")), []);
     // When the directory is the repository root, the tree is the whole repository.
     assert.deepEqual(listing("", dir).sort(), ["outside.md", "project/core/lib.rs"]);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("source archives exclude force-tracked environment files at every depth", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "docker-build-archive-"));
+  const git = (...args) => {
+    const result = spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@example.invalid", ...args], {
+      cwd: dir,
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout;
+  };
+  try {
+    const attributes = readFileSync(path.join(rootDir, ".gitattributes"), "utf8");
+    const envFiles = [];
+    for (const prefix of ["", "project/"]) {
+      mkdirSync(path.join(dir, prefix, "desktop", "nested"), { recursive: true });
+      writeFileSync(path.join(dir, prefix, ".gitattributes"), attributes);
+      writeFileSync(path.join(dir, prefix, ".gitignore"), ".env*\n");
+      writeFileSync(path.join(dir, prefix, "desktop", "source.js"), "export {};\n");
+      for (const name of [".env", ".env.example", ".env.local", ".env.production", ".env.production.local", "desktop/.env", "desktop/nested/.env.development.local"]) {
+        const relative = `${prefix}${name}`;
+        writeFileSync(path.join(dir, relative), "RIFT_UPDATE_ENDPOINT=synthetic-file-input\n");
+        envFiles.push(relative);
+      }
+    }
+    git("init", "-q");
+    git("add", "-A");
+    git("add", "-f", "--", ...envFiles);
+    git("commit", "-q", "-m", "synthetic archive fixture");
+    const tracked = git("ls-files").trim().split("\n");
+    for (const file of envFiles) assert.ok(tracked.includes(file), file);
+    for (const prefix of ["", "project/"]) {
+      const spec = archiveCommand(prefix, dir);
+      const archive = spawnSync("git", spec.args, { cwd: spec.cwd, maxBuffer: 1 << 24 });
+      assert.equal(archive.status, 0, String(archive.stderr));
+      const listing = spawnSync("tar", ["-t", "-f", "-"], { input: archive.stdout, encoding: "utf8" });
+      assert.equal(listing.status, 0, listing.stderr);
+      const files = listing.stdout.split("\n").filter((name) => name && !name.endsWith("/"));
+      const expected = [".gitattributes", ".gitignore", "desktop/source.js"];
+      if (!prefix) expected.push("project/.gitattributes", "project/.gitignore", "project/desktop/source.js");
+      assert.deepEqual(files.sort(), expected.sort());
+    }
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -290,15 +336,105 @@ test("the pipeline reports both exit codes on success and when the archive fails
   assert.deepEqual(failed, { archiveCode: 1, containerCode: 0 });
 });
 
-test("dependency scripts and downloads run without the secrets, only the build gets them", () => {
-  const install = entrypoint.indexOf("without_secrets pnpm install --frozen-lockfile");
-  const sidecar = entrypoint.indexOf("without_secrets node tooling/sidecar.mjs");
-  const copy = entrypoint.indexOf("cp /run/rift-build/.env /work/.env");
-  const build = entrypoint.indexOf("node tooling/tauri-build.mjs");
-  assert.ok(install > 0 && sidecar > install && copy > sidecar && build > copy);
-  for (const name of FORWARDED_ENV)
-    assert.ok(entrypoint.includes(`-u ${name}`), name);
-  assert.match(entrypoint, /rm -f \/work\/\.env/);
+test("the entry point isolates install and download processes, then builds with environment inputs only", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "docker-build-entrypoint-"));
+  try {
+    const work = path.join(dir, "work");
+    const out = path.join(dir, "out");
+    const bin = path.join(dir, "bin");
+    const source = path.join(dir, "source");
+    for (const directory of [work, out, bin, path.join(source, "desktop")])
+      mkdirSync(directory, { recursive: true });
+    writeFileSync(path.join(out, OUTPUT_MARKER), "");
+    writeFileSync(path.join(source, "desktop", "package.json"), "{}");
+    const files = [".env", ".env.local", "desktop/.env.production"].map((name) => path.join(work, name));
+    mkdirSync(path.join(work, "desktop"));
+    const fileInput = "RIFT_UPDATE_ENDPOINT=https://file-input.invalid/latest.json\nTAURI_SIGNING_PRIVATE_KEY=file-key\n";
+    for (const file of files) writeFileSync(file, fileInput);
+    const log = path.join(dir, "commands.jsonl");
+    const probe = path.join(dir, "probe.mjs");
+    writeFileSync(probe, `
+import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+const [command, ...args] = process.argv.slice(2);
+const record = {
+  command, args, cwd: process.cwd(),
+  env: Object.fromEntries(${JSON.stringify(FORWARDED_ENV)}.map((name) => [name, process.env[name] ?? null])),
+  files: ${JSON.stringify(files)}.map((file) => readFileSync(file, "utf8")),
+};
+appendFileSync(${JSON.stringify(log)}, JSON.stringify(record) + "\\n");
+if (command === "node" && args[0] === "tooling/tauri-build.mjs") {
+  if (process.env.FIXTURE_BUILD_EXIT) process.exit(Number(process.env.FIXTURE_BUILD_EXIT));
+  const release = path.join(process.cwd(), "target/x86_64-pc-windows-msvc/release");
+  mkdirSync(path.join(release, "bundle/nsis"), { recursive: true });
+  writeFileSync(path.join(release, "rift-desktop.exe"), "synthetic executable");
+  writeFileSync(path.join(release, "bundle/nsis/setup.exe"), "synthetic installer");
+  mkdirSync("desktop/dist", { recursive: true });
+  writeFileSync("desktop/dist/index.html", "synthetic frontend");
+}
+if (command === "node" && args[0] === "tooling/build-manifest.mjs")
+  writeFileSync(path.join(args[2], "build-manifest.json"), JSON.stringify({ commit: args[3] }));
+`);
+    for (const command of ["pnpm", "cargo", "node"])
+      writeFileSync(path.join(bin, command), `#!/bin/sh\nexec ${JSON.stringify(process.execPath)} ${JSON.stringify(probe)} ${command} "$@"\n`, { mode: 0o755 });
+    // Relocate only the container's two mount points; run the actual shell entry point.
+    const script = path.join(dir, "entrypoint.sh");
+    writeFileSync(script, entrypoint.replaceAll("/work", work).replaceAll("/out", out));
+    const archive = spawnSync("tar", ["-c", "-f", "-", "-C", source, "."]);
+    assert.equal(archive.status, 0, String(archive.stderr));
+    const secrets = {
+      RIFT_UPDATE_ENDPOINT: "https://process-input.invalid/latest.json",
+      TAURI_SIGNING_PRIVATE_KEY: "process-key",
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "process-password",
+    };
+    for (const { environment, fail } of [
+      { environment: {}, fail: false },
+      { environment: secrets, fail: false },
+      { environment: secrets, fail: true },
+    ]) {
+      writeFileSync(log, "");
+      const result = spawnSync("sh", [script], {
+        input: archive.stdout,
+        env: {
+          PATH: `${bin}${path.delimiter}${process.env.PATH}`,
+          RIFT_BUILD_COMMIT: COMMIT,
+          ...environment,
+          ...(fail ? { FIXTURE_BUILD_EXIT: "7" } : {}),
+        },
+        encoding: "utf8",
+      });
+      assert.equal(result.status, fail ? 7 : 0, result.stderr);
+      const records = readFileSync(log, "utf8").trim().split("\n").map((line) => JSON.parse(line));
+      assert.deepEqual(records.map(({ command, args }) => [command, args[0]]), [
+        ["pnpm", "install"], ["cargo", "fetch"], ["node", "tooling/sidecar.mjs"],
+        ["node", "tooling/tauri-build.mjs"],
+        ...(!fail ? [["node", "tooling/build-manifest.mjs"]] : []),
+      ]);
+      assert.deepEqual(records[0].args, ["install", "--frozen-lockfile"]);
+      assert.deepEqual(records[1].args, [
+        "fetch", "--locked", "--target", "x86_64-pc-windows-msvc",
+        "--manifest-path", path.join(work, "Cargo.toml"),
+      ]);
+      assert.deepEqual(records[2].args, ["tooling/sidecar.mjs", "windows"]);
+      assert.deepEqual(records[3].args, [
+        "tooling/tauri-build.mjs", "--runner", "cargo-xwin",
+        "--target", "x86_64-pc-windows-msvc", "--bundles", "nsis",
+      ]);
+      for (const [index, record] of records.entries()) {
+        assert.deepEqual(record.env, Object.fromEntries(FORWARDED_ENV.map((name) => [
+          name, index < 3 ? null : environment[name] ?? null,
+        ])));
+        assert.deepEqual(record.files, files.map(() => fileInput));
+      }
+      for (const file of files) assert.equal(readFileSync(file, "utf8"), fileInput);
+      if (!fail) {
+        assert.equal(readFileSync(path.join(out, "frontend/index.html"), "utf8"), "synthetic frontend");
+        assert.equal(JSON.parse(readFileSync(path.join(out, MANIFEST_NAME), "utf8")).commit, COMMIT);
+      }
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("an exclusion list alone is not a proxy and never selects the host network", () => {
@@ -327,11 +463,6 @@ test("a previous build's output is removed before a new build, and nothing else 
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
-});
-
-test("the entry point removes .env however the build ends and keeps the frontend bundle", () => {
-  assert.match(entrypoint, /trap 'rm -f \/work\/\.env' EXIT/);
-  assert.match(entrypoint, /cp -r \/work\/desktop\/dist \/out\/frontend/);
 });
 
 test("legacy symbols in a marked output are refused without deleting any files", () => {

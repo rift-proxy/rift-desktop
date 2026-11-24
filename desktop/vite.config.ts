@@ -4,6 +4,8 @@ import react from "@vitejs/plugin-react";
 import { yamlCatalog } from "./yamlCatalog";
 
 export default defineConfig({
+  // Build inputs come from the caller's process, never neighboring dotenv files.
+  envDir: false,
   plugins: [react(), yamlCatalog()],
   clearScreen: false,
   server: { port: 1420, strictPort: true },
