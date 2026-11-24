@@ -28,7 +28,8 @@ export function extractArchive(ext, archive, cache) {
       execFileSync("powershell", [
         "-NoProfile",
         "-Command",
-        `Expand-Archive -LiteralPath '${archive.replaceAll("'", "''")}' -DestinationPath '${cache.replaceAll("'", "''")}' -Force`,
+        // A pwsh parent can leave PowerShell 7 modules in Windows PowerShell's search path.
+        `$ErrorActionPreference = 'Stop'; Import-Module (Join-Path $PSHOME 'Modules/Microsoft.PowerShell.Archive/Microsoft.PowerShell.Archive.psd1') -Force; Expand-Archive -LiteralPath '${archive.replaceAll("'", "''")}' -DestinationPath '${cache.replaceAll("'", "''")}' -Force`,
       ]);
     else execFileSync("unzip", ["-o", "-q", archive, "-d", cache]);
   } else execFileSync("tar", ["-xzf", archive, "-C", cache]);

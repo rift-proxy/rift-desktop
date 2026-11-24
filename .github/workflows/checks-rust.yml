@@ -8,6 +8,9 @@ on:
       full:
         type: boolean
         default: false
+      skip_mutations:
+        type: boolean
+        default: false
 permissions:
   contents: read
 env:
@@ -114,7 +117,7 @@ jobs:
     name: 35 selection mutation
     permissions:
       contents: read
-    if: inputs.full
+    if: inputs.full && !inputs.skip_mutations
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     env:
@@ -139,16 +142,16 @@ jobs:
           set -euo pipefail
           sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache/CodeQL
           df -h .
-      - name: Mutate selection with one worker and scoped reaching tests
+      - name: Mutate selection with live phases and completion counters
         env:
           TMPDIR: ${{ runner.temp }}/selection-mutants
         run: |
           set -euo pipefail
           mkdir -p "$TMPDIR"
-          cargo mutants -p rift-core -C --locked -f core/src/selection.rs --timeout 120 --build-timeout 900 --jobs 1 --jobserver-tasks 1 -- --lib --test selection --test selection_stability --test selection_pace --test failover --test history --test application --test application_actions --test schedule --test selection_pool --test application_fast
+          node tooling/mutation-progress.mjs "$RUNNER_TEMP/selection-mutation-output" -- -p rift-core -C --locked -f core/src/selection.rs --timeout 120 --build-timeout 900 --jobs 1 --jobserver-tasks 1 -- --lib --test selection --test selection_stability --test selection_pace --test failover --test history --test application --test application_actions --test schedule --test selection_pool --test application_fast
       - name: Retain numeric mutation outcomes only
         if: always()
-        run: node tooling/mutation-summary.mjs mutants.out/outcomes.json reports/mutation-summary.json
+        run: node tooling/mutation-summary.mjs "$RUNNER_TEMP/selection-mutation-output/mutants.out/outcomes.json" reports/mutation-summary.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:

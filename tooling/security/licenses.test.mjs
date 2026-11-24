@@ -2,6 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createRequire } from 'node:module';
 import { resolve, join } from 'node:path';
+import { execFile, spawnSync } from 'node:child_process';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, symlinkSync, rmSync, existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
+import { createServer } from 'node:http';
+import { promisify } from 'node:util';
 import { cargoInventory, frontendInventory, checkLicense } from './licenses.mjs';
 
 if (!process.env.RIFT_SECURITY_TOOLS) throw new Error('Set RIFT_SECURITY_TOOLS to the pinned security tools installation');
@@ -70,4 +77,222 @@ test('pnpm inventory retains every grouped transitive version and restrictive li
   for (const malformed of [{}, { MIT: {} }, { MIT: [{ name: 'dep', versions: [] }] }]) {
     assert.throws(() => frontendInventory(malformed, frontend));
   }
+});
+
+const helper = fileURLToPath(new URL('./licenses.mjs', import.meta.url));
+const privateDiagnostic = '/private/store/token=do-not-publish https://user:password@example.invalid/secret';
+
+function licenseCli(t, pnpm = {}, cargo) {
+  const root = mkdtempSync(join(tmpdir(), 'rift-license-fixture-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const bin = join(root, 'bin');
+  mkdirSync(bin);
+  mkdirSync(join(root, 'desktop'));
+  writeFileSync(join(root, 'desktop/package.json'), JSON.stringify({ name: '@rift/desktop', version: '1' }));
+  symlinkSync(process.execPath, join(bin, 'node'));
+  const executable = `#!${process.execPath}
+const { readFileSync, writeFileSync } = require('node:fs');
+const { join, dirname, basename } = require('node:path');
+const root = dirname(dirname(process.argv[1]));
+const config = JSON.parse(readFileSync(join(root, 'fixture.json'), 'utf8'));
+const program = basename(process.argv[1]);
+writeFileSync(join(root, program + '-args.json'), JSON.stringify(process.argv.slice(2)));
+const behavior = config[program];
+if (behavior) {
+  if (behavior.signal) process.kill(process.pid, behavior.signal);
+  if (behavior.bytes) process.stdout.write('x'.repeat(behavior.bytes));
+  else process.stdout.write(behavior.stdout ?? '');
+  process.stderr.write(behavior.stderr ?? '');
+  process.exitCode = behavior.exit ?? 0;
+} else {
+  const manifest = process.argv.at(-1);
+  process.stdout.write(JSON.stringify({
+    packages: [
+      { id: 'root', name: 'root', version: '1', manifest_path: manifest, license: 'MIT' },
+      { id: 'dep', name: 'cargo-dependency', version: '2', license: 'MIT' }
+    ],
+    resolve: { nodes: [{ id: 'root', dependencies: ['dep'] }, { id: 'dep', dependencies: [] }] }
+  }));
+}
+`;
+  writeFileSync(join(bin, 'cargo'), executable, { mode: 0o700 });
+  if (!pnpm.missing) writeFileSync(join(bin, 'pnpm'), executable, { mode: pnpm.denied ? 0o600 : 0o700 });
+  writeFileSync(join(root, 'fixture.json'), JSON.stringify({ pnpm, cargo }));
+  const result = spawnSync(process.execPath, [helper], {
+    cwd: root, encoding: 'utf8',
+    env: { PATH: bin, RIFT_SECURITY_TOOLS: resolve(process.env.RIFT_SECURITY_TOOLS) },
+  });
+  assert.ifError(result.error);
+  const output = `${result.stdout}${result.stderr}`;
+  for (const forbidden of [privateDiagnostic, root, 'do-not-publish', 'password', 'example.invalid']) assert.ok(!output.includes(forbidden), output);
+  return { ...result, root, output };
+}
+
+test('CLI preserves production, dev, optional and every transitive version in frontend evidence', t => {
+  const listing = { MIT: [
+    { name: '@rift/desktop', versions: ['1'] },
+    { name: 'production', versions: ['1.0.0'] },
+    { name: 'transitive', versions: ['1.0.0', '2.0.0'] },
+    { name: 'dev', versions: ['3.0.0'] },
+    { name: 'optional', versions: ['4.0.0'] },
+  ] };
+  const result = licenseCli(t, { stdout: JSON.stringify(listing) });
+  assert.equal(result.status, 0, result.output);
+  assert.match(result.stdout, /License policy passed/);
+  assert.deepEqual(JSON.parse(readFileSync(join(result.root, 'pnpm-args.json'), 'utf8')),
+    ['--dir', join(result.root, 'desktop'), 'licenses', 'list', '--json']);
+  assert.deepEqual(JSON.parse(readFileSync(join(result.root, 'reports/security/licenses/frontend.json'), 'utf8')), [
+    { name: 'production', version: '1.0.0', license: 'MIT' },
+    { name: 'transitive', version: '1.0.0', license: 'MIT' },
+    { name: 'transitive', version: '2.0.0', license: 'MIT' },
+    { name: 'dev', version: '3.0.0', license: 'MIT' },
+    { name: 'optional', version: '4.0.0', license: 'MIT' },
+  ]);
+});
+
+test('CLI exposes only bounded known pnpm inventory error metadata and recovery guidance', t => {
+  for (const [code, category] of [
+    ['ERR_PNPM_MISSING_PACKAGE_INDEX_FILE', 'missing-package-index'],
+    ['ERR_PNPM_MISSING_PACKAGE_MANIFEST', 'missing-package-manifest'],
+    ['ERR_PNPM_LICENSES_NO_LOCKFILE', 'missing-lockfile'],
+    ['ERR_PNPM_UNSUPPORTED_PACKAGE_TYPE', 'unsupported-package-type'],
+  ]) {
+    const result = licenseCli(t, { stdout: JSON.stringify({ error: { code, message: privateDiagnostic } }), stderr: privateDiagnostic, exit: 23 });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, new RegExp(`pnpm inventory command failed \\(exit=23; code=${code}; category=${category}\\)`));
+    assert.ok(result.stderr.length < 500);
+    if (category.startsWith('missing-package')) assert.match(result.stderr, /pnpm store.*frozen frontend install/);
+    for (const name of ['core', 'shell', 'fuzz']) assert.ok(existsSync(join(result.root, `reports/security/licenses/${name}.json`)));
+    assert.ok(!existsSync(join(result.root, 'reports/security/licenses/frontend.json')));
+  }
+});
+
+test('CLI distinguishes missing executables, permissions, termination and unknown child failures', t => {
+  for (const [behavior, expected] of [
+    [{ missing: true }, /pnpm inventory command failed \(code=ENOENT; category=executable-not-found\)/],
+    [{ denied: true }, /code=EACCES; category=executable-not-permitted/],
+    [{ signal: 'SIGTERM' }, /signal=SIGTERM; category=terminated/],
+    [{ stdout: JSON.stringify({ error: { code: privateDiagnostic, message: privateDiagnostic } }), stderr: privateDiagnostic, exit: 7 }, /exit=7; category=nonzero-exit/],
+    [{ stderr: `ERR_PNPM_MISSING_PACKAGE_INDEX_FILE ${privateDiagnostic}`, exit: 1 }, /code=ERR_PNPM_MISSING_PACKAGE_INDEX_FILE; category=missing-package-index/],
+  ]) {
+    const result = licenseCli(t, behavior);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, expected);
+    assert.ok(!existsSync(join(result.root, 'reports/security/licenses/frontend.json')));
+  }
+});
+
+test('CLI identifies a subprocess output limit instead of hiding the spawn error', t => {
+  const result = licenseCli(t, { bytes: 65 * 1024 * 1024 });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /pnpm inventory command failed .*code=ENOBUFS; category=output-limit-exceeded/);
+});
+
+test('CLI separates empty output, JSON parse failures and invalid or empty inventories', t => {
+  for (const [stdout, expected] of [
+    [' \n', /pnpm inventory output is empty/],
+    [privateDiagnostic, /pnpm inventory output is not valid JSON/],
+    ['null', /Invalid pnpm license inventory/],
+    ['[]', /Invalid pnpm license inventory/],
+    ['{"MIT":{}}', /Invalid pnpm license group/],
+    ['{"MIT":[{"name":"dep","versions":[]}]}', /Invalid pnpm package inventory/],
+    ['{}', /Frontend license inventory is empty/],
+    ['{"MIT":[{"name":"@rift/desktop","versions":["1"]}]}', /Frontend license inventory is empty/],
+  ]) {
+    const result = licenseCli(t, { stdout });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, expected);
+    assert.ok(!existsSync(join(result.root, 'reports/security/licenses/frontend.json')));
+  }
+});
+
+test('CLI rejects restrictive transitive/dev/optional licenses even alongside MIT alternatives', t => {
+  const result = licenseCli(t, { stdout: JSON.stringify({
+    MIT: [{ name: 'production', versions: ['1'] }],
+    'MIT OR GPL-3.0-only': [{ name: 'optional-transitive', versions: ['2', '3'] }, { name: 'dev', versions: ['4'] }],
+  }) });
+  assert.equal(result.status, 1);
+  for (const dependency of ['optional-transitive@2', 'optional-transitive@3', 'dev@4']) assert.ok(result.stderr.includes(`${dependency}: restrictive license`));
+  assert.equal(JSON.parse(readFileSync(join(result.root, 'reports/security/licenses/frontend.json'), 'utf8')).length, 4);
+});
+
+test('CLI keeps cargo subprocess diagnostics sanitized too', t => {
+  const result = licenseCli(t, {}, { stdout: privateDiagnostic, stderr: privateDiagnostic, exit: 9 });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /cargo inventory command failed \(exit=9; category=nonzero-exit\)/);
+  assert.ok(!existsSync(join(result.root, 'pnpm-args.json')));
+});
+
+test('a cold-store scan includes an engine-gated optional transitive license', async t => {
+  const root = mkdtempSync(join(tmpdir(), 'rift-license-engine-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const frontend = join(root, 'frontend');
+  mkdirSync(frontend);
+  const marker = join(root, 'unexpected-script');
+  const tarballs = new Map();
+  const server = createServer((request, response) => {
+    const tarball = tarballs.get(request.url);
+    response.writeHead(tarball ? 200 : 404);
+    response.end(tarball);
+  });
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  t.after(() => new Promise(resolve => { server.closeAllConnections(); server.close(resolve); }));
+  const registry = `http://127.0.0.1:${server.address().port}`;
+  const env = { ...process.env, CI: 'true', COREPACK_ENABLE_NETWORK: '0',
+    npm_config_cache: join(root, 'npm-cache'), npm_config_store_dir: join(root, 'scan-store'),
+    npm_config_registry: registry, npm_config_fetch_retries: '0' };
+  const execute = promisify(execFile);
+  async function invoke(program, args, cwd = frontend) {
+    try {
+      return (await execute(program, args, { cwd, env, encoding: 'utf8', timeout: 30000 })).stdout;
+    } catch (error) {
+      assert.fail(`${program} failed: ${error.stdout ?? ''}${error.stderr ?? ''}`);
+    }
+  }
+  async function pack(name, manifest) {
+    const directory = join(root, name);
+    mkdirSync(directory);
+    writeFileSync(join(directory, 'package.json'), JSON.stringify({ name, version: '1.0.0', ...manifest }));
+    const [result] = JSON.parse(await invoke('npm', ['pack', '--ignore-scripts', '--json',
+      '--pack-destination', root], directory));
+    const tarball = readFileSync(join(root, result.filename));
+    const url = `/${result.filename}`;
+    tarballs.set(url, tarball);
+    return { resolution: { integrity: `sha512-${createHash('sha512').update(tarball).digest('base64')}`,
+      tarball: `${registry}${url}` }, ...(manifest.engines ? { engines: manifest.engines } : {}) };
+  }
+  const optional = await pack('engine-gated-optional', {
+    license: 'GPL-3.0-only',
+    // Mirrors the optional Rollup package skipped by Node 24.11.1 in CI.
+    engines: { node: '^22.20 || ^24.12 || >=25' },
+    scripts: { postinstall: `node -e "require('node:fs').writeFileSync(${JSON.stringify(marker).replaceAll('"', '\\"')}, 'ran')"` },
+  });
+  const parent = await pack('dev-parent', { license: 'MIT',
+    optionalDependencies: { 'engine-gated-optional': '1.0.0' } });
+  const manifest = { name: 'license-fixture', version: '1.0.0',
+    devDependencies: { 'dev-parent': '1.0.0' } };
+  writeFileSync(join(frontend, 'package.json'), JSON.stringify(manifest));
+  const lock = JSON.stringify({
+    lockfileVersion: '9.0', settings: { autoInstallPeers: true, excludeLinksFromLockfile: false },
+    importers: { '.': { devDependencies: { 'dev-parent': { specifier: '1.0.0', version: '1.0.0' } } } },
+    packages: { 'dev-parent@1.0.0': parent, 'engine-gated-optional@1.0.0': optional },
+    snapshots: {
+      'dev-parent@1.0.0': { optionalDependencies: { 'engine-gated-optional': '1.0.0' } },
+      'engine-gated-optional@1.0.0': { optional: true },
+    },
+  });
+  writeFileSync(join(frontend, 'pnpm-lock.yaml'), lock);
+  await invoke('pnpm', ['install', '--frozen-lockfile', '--ignore-scripts']);
+  const listing = JSON.parse(await invoke('pnpm', ['licenses', 'list', '--json']));
+  const inventory = frontendInventory(listing, manifest);
+  assert.deepEqual(inventory.find(pkg => pkg.name === 'engine-gated-optional'),
+    { name: 'engine-gated-optional', version: '1.0.0', license: 'GPL-3.0-only' });
+  assert.throws(() => {
+    for (const pkg of inventory) checkLicense(pkg.name, pkg.version, pkg.license, parse);
+  }, /engine-gated-optional@1\.0\.0: restrictive license GPL-3\.0-only/);
+  assert.equal(readFileSync(join(frontend, 'pnpm-lock.yaml'), 'utf8'), lock);
+  assert.ok(!existsSync(marker), 'security preparation must not execute lifecycle scripts');
 });

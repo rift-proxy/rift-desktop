@@ -87,3 +87,32 @@ test("actual CodeQL guard permits only the exact full manual dev SHA", () => {
   assert.doesNotThrow(() => execute({}));
   for (const change of [{ FULL: "false" }, { GITHUB_EVENT_NAME: "pull_request" }, { GITHUB_EVENT_NAME: "workflow_run" }, { GITHUB_REF: "refs/heads/main" }, { SOURCE_SHA: baseline }, { SOURCE_SHA: "dev" }]) assert.throws(() => execute(change), /full manual dev/);
 });
+
+test("signed candidate schedules after expected skips but rejects failed gates and cancellation", () => {
+  const yaml = readFileSync(new URL("../.github/workflows/quality.yml", import.meta.url), "utf8");
+  const raw = /^  candidate:\n[\s\S]*?^    if:\s*(.+)$/m.exec(yaml)?.[1];
+  assert.ok(raw, "Candidate scheduling condition must be present");
+  const expression = raw.replace(/^\$\{\{\s*|\s*\}\}$/g, "")
+    .replace(/needs\.([\w-]+)/g, (_, name) => `needs[${JSON.stringify(name)}]`);
+  // GitHub injects success() unless the predicate contains a status function.
+  // Unlike immediate needs, transitive ancestors include intentionally skipped jobs.
+  const predicate = /\b(?:success|failure|always|cancelled)\s*\(/.test(expression)
+    ? expression : `success() && (${expression})`;
+  const scheduled = ({ event = "workflow_dispatch", ref = "refs/heads/dev", full = "true",
+    gate = "success", cancelled = false, skippedAncestor = true } = {}) =>
+    runInNewContext(predicate, {
+      github: { event_name: event, ref },
+      needs: { resolve: { result: "success", outputs: { full } }, "source-gate": { result: gate } },
+      success: () => !skippedAncestor && gate === "success" && !cancelled,
+      failure: () => gate === "failure",
+      always: () => true,
+      cancelled: () => cancelled,
+    });
+  assert.equal(scheduled(), true, "Expected upstream skips must not suppress a qualified signed build");
+  assert.equal(scheduled({ skippedAncestor: false }), true);
+  for (const change of [
+    { cancelled: true }, { gate: "failure" }, { gate: "cancelled" }, { gate: "skipped" }, { gate: "" },
+    { event: "pull_request" }, { event: "push" }, { ref: "refs/heads/main" },
+    { ref: "refs/pull/17/merge" }, { full: "false" }, { full: "" },
+  ]) assert.equal(scheduled(change), false, JSON.stringify(change));
+});

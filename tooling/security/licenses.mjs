@@ -70,8 +70,51 @@ export function frontendInventory(listing, frontend) {
 
 function command(program, args) {
   const result = spawnSync(program, args, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-  if (result.error || result.status !== 0) throw new Error(`${program} failed; a complete license inventory is required`);
-  return JSON.parse(result.stdout);
+  // Only fixed codes/categories cross the subprocess boundary. pnpm's messages
+  // and even JSON errors can contain store paths, registry URLs or credentials.
+  const pnpmErrors = new Map([
+    ['ERR_PNPM_MISSING_PACKAGE_INDEX_FILE', ['missing-package-index', 'Populate the pnpm store with a frozen frontend install before collecting licenses.']],
+    ['ERR_PNPM_MISSING_PACKAGE_MANIFEST', ['missing-package-manifest', 'Restore the pnpm store with a frozen frontend install before collecting licenses.']],
+    ['ERR_PNPM_LICENSES_NO_LOCKFILE', ['missing-lockfile', 'A frontend lockfile is required.']],
+    ['ERR_PNPM_UNSUPPORTED_PACKAGE_TYPE', ['unsupported-package-type', 'Review the frontend lockfile package resolution types.']],
+  ]);
+  let code;
+  if (program === 'pnpm') {
+    const diagnostic = `${result.stdout?.slice(0, 8192) ?? ''}\n${result.stderr?.slice(0, 8192) ?? ''}`;
+    let errorCode;
+    try { errorCode = JSON.parse(result.stdout?.slice(0, 8192)).error?.code; } catch {}
+    // Plain pnpm errors put the code at the start of a line; do not mistake a
+    // package's inventory fields for subprocess error metadata.
+    code = pnpmErrors.has(errorCode) ? errorCode : diagnostic.match(/^\s*(ERR_PNPM_[A-Z_]+)(?=\s|$)/m)?.[1];
+    if (!pnpmErrors.has(code)) code = undefined;
+  }
+  if (result.error || result.status !== 0 || code) {
+    const metadata = [];
+    if (Number.isSafeInteger(result.status)) metadata.push(`exit=${result.status}`);
+    const signals = new Set(['SIGABRT', 'SIGBUS', 'SIGFPE', 'SIGHUP', 'SIGILL', 'SIGINT', 'SIGKILL', 'SIGPIPE', 'SIGQUIT', 'SIGSEGV', 'SIGTERM', 'SIGTRAP', 'SIGXCPU', 'SIGXFSZ']);
+    if (result.signal) metadata.push(`signal=${signals.has(result.signal) ? result.signal : 'other'}`);
+    const spawnErrors = new Map([
+      ['ENOENT', 'executable-not-found'], ['EACCES', 'executable-not-permitted'],
+      ['EPERM', 'executable-not-permitted'], ['ENOEXEC', 'invalid-executable'],
+      ['ENOBUFS', 'output-limit-exceeded'], ['ENOMEM', 'insufficient-memory'],
+      ['EAGAIN', 'process-limit-exceeded'], ['ETIMEDOUT', 'subprocess-timeout'],
+    ]);
+    let hint = '';
+    if (result.error) {
+      const spawnCode = spawnErrors.has(result.error.code) ? result.error.code : 'UNKNOWN';
+      metadata.push(`code=${spawnCode}`, `category=${spawnErrors.get(spawnCode) ?? 'spawn-error'}`);
+    } else if (code) {
+      const [category, guidance] = pnpmErrors.get(code);
+      metadata.push(`code=${code}`, `category=${category}`);
+      hint = ` ${guidance}`;
+    } else {
+      metadata.push(`category=${result.signal ? 'terminated' : 'nonzero-exit'}`);
+    }
+    throw new Error(`${program} inventory command failed (${metadata.join('; ')}); a complete license inventory is required.${hint}`);
+  }
+  if (!result.stdout.trim()) throw new Error(`${program} inventory output is empty; a complete license inventory is required`);
+  try { return JSON.parse(result.stdout); }
+  catch { throw new Error(`${program} inventory output is not valid JSON; a complete license inventory is required`); }
 }
 
 export function run(root = '.', tools = process.env.RIFT_SECURITY_TOOLS) {

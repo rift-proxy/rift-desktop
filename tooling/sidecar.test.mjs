@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { ensureSidecar, sha256 } from "./sidecar.mjs";
@@ -193,6 +193,60 @@ test(
     assert.equal(readFileSync(dest).toString(), GOOD.toString());
   },
 );
+
+test("real ZIP extraction ignores inherited Archive modules and overwrites both core layouts", async (t) => {
+  const directory = mkdtempSync(join(tmpdir(), "rift-sidecar-zip-"));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const moduleRoot = join(directory, "foreign-modules");
+  const module = join(moduleRoot, "Microsoft.PowerShell.Archive");
+  mkdirSync(module, { recursive: true });
+  writeFileSync(join(module, "Microsoft.PowerShell.Archive.psd1"),
+    "@{ RootModule = 'Microsoft.PowerShell.Archive.psm1'; ModuleVersion = '99.0.0'; FunctionsToExport = @('Expand-Archive') }");
+  writeFileSync(join(module, "Microsoft.PowerShell.Archive.psm1"),
+    "function Expand-Archive { Write-Error 'Incompatible inherited Archive module loaded' }; Export-ModuleMember -Function Expand-Archive");
+  const previous = process.env.PSModulePath;
+  process.env.PSModulePath = [moduleRoot, previous].filter(Boolean).join(delimiter);
+  t.after(() => {
+    if (previous === undefined) delete process.env.PSModulePath;
+    else process.env.PSModulePath = previous;
+  });
+  // Stored ZIP with nested/sing-box.exe and xray.exe, both containing GOOD.
+  const archive = Buffer.from(
+    "UEsDBBQAAAAAAAAAIVxplX5/GAAAABgAAAATAAAAbmVzdGVkL3NpbmctYm94LmV4ZXZlcmlmaWVkIHNpbmctYm94IGJpbmFyeVBLAwQUAAAAAAAAACFcaZV+fxgAAAAYAAAACAAAAHhyYXkuZXhldmVyaWZpZWQgc2luZy1ib3ggYmluYXJ5UEsBAhQDFAAAAAAAAAAhXGmVfn8YAAAAGAAAABMAAAAAAAAAAAAAAIABAAAAAG5lc3RlZC9zaW5nLWJveC5leGVQSwECFAMUAAAAAAAAACFcaZV+fxgAAAAYAAAACAAAAAAAAAAAAAAAgAFJAAAAeHJheS5leGVQSwUGAAAAAAIAAgB3AAAAhwAAAAAA",
+    "base64",
+  );
+  mkdirSync(join(directory, "binaries"));
+  for (const [core, extractedRelative] of [["sing-box", "nested/sing-box.exe"], ["xray", "xray.exe"]]) {
+    const dest = join(directory, "binaries", `${core}.exe`);
+    const cache = join(directory, "cache with spaces ' quotes", core);
+    const options = {
+      dest, cache, name: core, ext: "zip", suffix: ".exe", extractedRelative,
+      archiveDigest: sha256(archive), binaryDigest: sha256(GOOD),
+      url: "https://example.invalid/core.zip",
+      download: async () => ({ ok: true, status: 200, arrayBuffer: async () => archive }),
+      log: () => {},
+    };
+    assert.equal(await ensureSidecar(options), "downloaded");
+    assert.deepEqual(readFileSync(dest), GOOD);
+    writeFileSync(dest, TAMPERED);
+    writeFileSync(join(cache, extractedRelative), TAMPERED);
+    assert.equal(await ensureSidecar(options), "downloaded");
+    assert.deepEqual(readFileSync(dest), GOOD);
+  }
+});
+
+test("a real ZIP extractor failure preserves the old binary and is not hidden by ENOENT", async (t) => {
+  const archive = Buffer.from("not a ZIP archive");
+  const { dest, options } = setup(t, { cached: TAMPERED, archive });
+  await assert.rejects(ensureSidecar({
+    ...options, ext: "zip", archiveDigest: sha256(archive), extract: undefined,
+  }), error => {
+    assert.notEqual(error.code, "ENOENT");
+    assert.ok(Number.isInteger(error.status) && error.status !== 0);
+    return true;
+  });
+  assert.deepEqual(readFileSync(dest), TAMPERED);
+});
 
 test("the sidecar entry point still runs through a symlink", (t) => {
   const directory = mkdtempSync(join(tmpdir(), "rift-sidecar-entry-"));
