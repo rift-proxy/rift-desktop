@@ -153,7 +153,7 @@ export async function promoteCandidate(options, api, upload, { base = root } = {
   let release = await releasesForTag(prefix, tag, api);
   const expected = {
     tag_name: tag, target_commitish: selected.releaseSha, name: `Rift ${tag}`, draft: true, prerelease: false,
-    body: `Windows x64. Candidate source ${selected.source}; source tree ${selected.tree}; release commit ${selected.releaseSha}; Quality run ${selected.runId} attempt ${selected.runAttempt}; artifact ${selected.artifactId}; manifest SHA-256 ${digest(readFileSync(path.join(options.directory, "manifest.json")))}. Review the installer, signature and latest.json before publishing.`,
+    body: "",
   };
   if (release) {
     assertDraft(release, expected, selected.repo);

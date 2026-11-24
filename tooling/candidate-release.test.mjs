@@ -55,7 +55,7 @@ function service() {
       assert.equal(body.draft, true);
       assert.equal(body.target_commitish, releaseSha);
       if (state.remote) throw new Error("Release collision");
-      state.remote = { ...body, id: 41, published_at: null, upload_url: `https://uploads.github.com/repos/${repo}/releases/41/assets{?name,label}` };
+      state.remote = { ...body, body: body.generate_release_notes ? `${body.body ?? ""}\nGenerated release notes` : body.body ?? "", id: 41, published_at: null, upload_url: `https://uploads.github.com/repos/${repo}/releases/41/assets{?name,label}` };
       result = state.remote;
     } else if (method === "GET" && endpoint === `${prefix}/releases/41`) result = state.remote;
     else if (method === "GET" && ["/assets?per_page=100", "/assets?per_page=100&page=1"].some((suffix) => endpoint === `${prefix}/releases/41${suffix}`)) result = [...state.uploads].map(([name, bytes], index) => ({ id: index + 51, name, size: bytes.length, state: "uploaded" }));
@@ -187,6 +187,7 @@ test("promotion creates a new immutable main tag and draft with exactly three si
   assert.deepEqual(result, { tag: "v1.2.3", releaseId: 41, source, release: releaseSha });
   assert.equal(state.tag.object.sha, releaseSha);
   assert.equal(state.remote.draft, true);
+  assert.equal(state.remote.body, "", "the release description is written manually, not generated");
   assert.equal(state.uploads.size, 3);
   for (const [name, bytes] of state.uploads) assert.deepEqual(bytes, readFileSync(path.join(f.directory, "public", name)));
   assert.equal(state.uploads.has("manifest.json"), false);
@@ -261,8 +262,6 @@ test("recovery refuses foreign/published drafts and corrupt assets before any ad
     "published": (s) => { s.remote.draft = false; s.remote.published_at = "2026-11-19T00:00:00Z"; },
     "published timestamp": (s) => { s.remote.published_at = "2026-11-19T00:00:00Z"; },
     "foreign target": (s) => { s.remote.target_commitish = source; },
-    "foreign candidate": (s) => { s.remote.body = s.remote.body.replace(`artifact ${artifactId}`, "artifact 999"); },
-    "foreign manifest": (s) => { s.remote.body = s.remote.body.replace(/manifest SHA-256 [0-9a-f]{64}/, `manifest SHA-256 ${"0".repeat(64)}`); },
     "edited notes": (s) => { s.remote.body += "\nmanual edit"; },
     "foreign endpoint": (s) => { s.remote.upload_url = s.remote.upload_url.replace(repo, "foreign/repo"); },
     "prerelease": (s) => { s.remote.prerelease = true; },
@@ -366,7 +365,6 @@ test("explicit owner removal of a damaged attributable draft permits recovery wi
   const name = state.uploads.keys().next().value;
   state.uploads.set(name, Buffer.from("damaged upload"));
   await assert.rejects(promoteCandidate(promoteOptions, api, upload, f.options), /size\/state/);
-  assert.match(state.remote.body, new RegExp(`Quality run ${runId} attempt ${runAttempt}; artifact ${artifactId}`));
   assert.equal(state.remote.draft, true);
   // The owner deletes only this verified unpublished draft in GitHub UI.
   state.remote = null;
