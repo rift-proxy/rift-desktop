@@ -184,6 +184,8 @@ jobs:
           cache-dependency-path: desktop/pnpm-lock.yaml
       # Dependencies/downloads run before any signing secret enters the process environment.
       - run: pnpm --dir desktop install --frozen-lockfile
+      - name: Verify archive extraction in the Windows host before downloading cores
+        run: node --test tooling/sidecar.test.mjs
       - run: node tooling/sidecar.mjs windows
       - run: cargo fetch --locked --target x86_64-pc-windows-msvc
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -234,7 +236,7 @@ jobs:
           node tooling/candidate-release.mjs create candidate
           exit $LASTEXITCODE
       - name: Retain numeric size evidence for native baseline review
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && hashFiles('reports/size-budgets.txt') != '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: candidate-size-measurements
