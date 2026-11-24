@@ -8,6 +8,9 @@ on:
       full:
         type: boolean
         default: false
+      skip_mutations:
+        type: boolean
+        default: false
 permissions:
   contents: read
 env:
@@ -114,7 +117,7 @@ jobs:
     name: 35 selection mutation
     permissions:
       contents: read
-    if: inputs.full
+    if: inputs.full && !inputs.skip_mutations
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     env:

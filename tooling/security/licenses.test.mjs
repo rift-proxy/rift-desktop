@@ -2,10 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createRequire } from 'node:module';
 import { resolve, join } from 'node:path';
-import { spawnSync } from 'node:child_process';
+import { execFile, spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, symlinkSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
+import { createServer } from 'node:http';
+import { promisify } from 'node:util';
 import { cargoInventory, frontendInventory, checkLicense } from './licenses.mjs';
 
 if (!process.env.RIFT_SECURITY_TOOLS) throw new Error('Set RIFT_SECURITY_TOOLS to the pinned security tools installation');
@@ -218,4 +221,78 @@ test('CLI keeps cargo subprocess diagnostics sanitized too', t => {
   assert.equal(result.status, 1);
   assert.match(result.stderr, /cargo inventory command failed \(exit=9; category=nonzero-exit\)/);
   assert.ok(!existsSync(join(result.root, 'pnpm-args.json')));
+});
+
+test('a cold-store scan includes an engine-gated optional transitive license', async t => {
+  const root = mkdtempSync(join(tmpdir(), 'rift-license-engine-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const frontend = join(root, 'frontend');
+  mkdirSync(frontend);
+  const marker = join(root, 'unexpected-script');
+  const tarballs = new Map();
+  const server = createServer((request, response) => {
+    const tarball = tarballs.get(request.url);
+    response.writeHead(tarball ? 200 : 404);
+    response.end(tarball);
+  });
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  t.after(() => new Promise(resolve => { server.closeAllConnections(); server.close(resolve); }));
+  const registry = `http://127.0.0.1:${server.address().port}`;
+  const env = { ...process.env, CI: 'true', COREPACK_ENABLE_NETWORK: '0',
+    npm_config_cache: join(root, 'npm-cache'), npm_config_store_dir: join(root, 'scan-store'),
+    npm_config_registry: registry, npm_config_fetch_retries: '0' };
+  const execute = promisify(execFile);
+  async function invoke(program, args, cwd = frontend) {
+    try {
+      return (await execute(program, args, { cwd, env, encoding: 'utf8', timeout: 30000 })).stdout;
+    } catch (error) {
+      assert.fail(`${program} failed: ${error.stdout ?? ''}${error.stderr ?? ''}`);
+    }
+  }
+  async function pack(name, manifest) {
+    const directory = join(root, name);
+    mkdirSync(directory);
+    writeFileSync(join(directory, 'package.json'), JSON.stringify({ name, version: '1.0.0', ...manifest }));
+    const [result] = JSON.parse(await invoke('npm', ['pack', '--ignore-scripts', '--json',
+      '--pack-destination', root], directory));
+    const tarball = readFileSync(join(root, result.filename));
+    const url = `/${result.filename}`;
+    tarballs.set(url, tarball);
+    return { resolution: { integrity: `sha512-${createHash('sha512').update(tarball).digest('base64')}`,
+      tarball: `${registry}${url}` }, ...(manifest.engines ? { engines: manifest.engines } : {}) };
+  }
+  const optional = await pack('engine-gated-optional', {
+    license: 'GPL-3.0-only',
+    // Mirrors the optional Rollup package skipped by Node 24.11.1 in CI.
+    engines: { node: '^22.20 || ^24.12 || >=25' },
+    scripts: { postinstall: `node -e "require('node:fs').writeFileSync(${JSON.stringify(marker).replaceAll('"', '\\"')}, 'ran')"` },
+  });
+  const parent = await pack('dev-parent', { license: 'MIT',
+    optionalDependencies: { 'engine-gated-optional': '1.0.0' } });
+  const manifest = { name: 'license-fixture', version: '1.0.0',
+    devDependencies: { 'dev-parent': '1.0.0' } };
+  writeFileSync(join(frontend, 'package.json'), JSON.stringify(manifest));
+  const lock = JSON.stringify({
+    lockfileVersion: '9.0', settings: { autoInstallPeers: true, excludeLinksFromLockfile: false },
+    importers: { '.': { devDependencies: { 'dev-parent': { specifier: '1.0.0', version: '1.0.0' } } } },
+    packages: { 'dev-parent@1.0.0': parent, 'engine-gated-optional@1.0.0': optional },
+    snapshots: {
+      'dev-parent@1.0.0': { optionalDependencies: { 'engine-gated-optional': '1.0.0' } },
+      'engine-gated-optional@1.0.0': { optional: true },
+    },
+  });
+  writeFileSync(join(frontend, 'pnpm-lock.yaml'), lock);
+  await invoke('pnpm', ['install', '--frozen-lockfile', '--ignore-scripts']);
+  const listing = JSON.parse(await invoke('pnpm', ['licenses', 'list', '--json']));
+  const inventory = frontendInventory(listing, manifest);
+  assert.deepEqual(inventory.find(pkg => pkg.name === 'engine-gated-optional'),
+    { name: 'engine-gated-optional', version: '1.0.0', license: 'GPL-3.0-only' });
+  assert.throws(() => {
+    for (const pkg of inventory) checkLicense(pkg.name, pkg.version, pkg.license, parse);
+  }, /engine-gated-optional@1\.0\.0: restrictive license GPL-3\.0-only/);
+  assert.equal(readFileSync(join(frontend, 'pnpm-lock.yaml'), 'utf8'), lock);
+  assert.ok(!existsSync(marker), 'security preparation must not execute lifecycle scripts');
 });

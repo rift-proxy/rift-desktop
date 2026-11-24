@@ -3,6 +3,11 @@ on:
   pull_request:
     branches: [dev, main]
   workflow_dispatch:
+    inputs:
+      skip_rust_mutations:
+        description: Skip Rust mutation check
+        type: boolean
+        default: true
 permissions:
   contents: read
 concurrency:
@@ -48,6 +53,7 @@ jobs:
     with:
       ref: ${{ needs.resolve.outputs.source }}
       full: ${{ needs.resolve.outputs.full == 'true' }}
+      skip_mutations: ${{ inputs.skip_rust_mutations == true }}
   security:
     permissions:
       contents: read
