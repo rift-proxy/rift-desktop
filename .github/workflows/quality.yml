@@ -158,7 +158,8 @@ jobs:
       contents: read
     timeout-minutes: 120
     needs: [resolve, source-gate]
-    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/dev' && needs.resolve.outputs.full == 'true' && needs.source-gate.result == 'success'
+    # Expected skipped ancestors must not override the explicit source gate.
+    if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/dev' && needs.resolve.outputs.full == 'true' && needs.source-gate.result == 'success' }}
     runs-on: windows-2022
     # Required reviewer + selected deployment branch dev are mandatory repository settings.
     environment: candidate
