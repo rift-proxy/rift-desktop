@@ -9,14 +9,16 @@ version = "1.1.1"
 edition = "2021"
 publish = false
 
-# The debug info of a release goes to the PDB beside the executable (MSVC), not into it. It holds
-# the lines of source for addresses and is kept with the release, never sent anywhere: an address
-# of an error report is read against it later.
 [profile.release]
-debug = "line-tables-only"
-# Reduce duplicate code after the two-core migration while retaining external PDB symbols.
+debug = false
+strip = "symbols"
 lto = "thin"
 codegen-units = 1
+
+# Gungraun needs named benchmark functions for collection; benchmarks are not shipped.
+[profile.bench]
+debug = "line-tables-only"
+strip = "none"
 
 # Optimised like release, with debug info for Samply/Heaptrack stacks.
 [profile.profiling]

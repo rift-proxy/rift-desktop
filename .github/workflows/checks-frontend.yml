@@ -42,21 +42,7 @@ jobs:
         run: pnpm --dir desktop lint
       # The build script is tsc --noEmit && vite build: do not typecheck twice.
       - name: '15–16 · Typecheck and production build'
-        env:
-          # Only the original production build emits maps, outside the shipped bundle.
-          RIFT_MAPS_DIR: ${{ inputs.full && format('{0}/frontend-maps', runner.temp) || '' }}
         run: pnpm --dir desktop build
-      - name: Archive matching production JavaScript and maps (public plaintext)
-        if: ${{ inputs.full }}
-        run: node tooling/symbols-archive.mjs frontend "$RUNNER_TEMP/frontend-maps" desktop/dist "$RUNNER_TEMP/frontend-symbols.tar"
-      - name: Retain public plaintext frontend symbols
-        if: ${{ inputs.full }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: frontend-symbols
-          retention-days: 30
-          if-no-files-found: error
-          path: ${{ runner.temp }}/frontend-symbols.tar
       - name: Install the lockfile-matched Chromium and system libraries
         run: pnpm --dir desktop exec playwright install --with-deps chromium
       - name: '18–19, 22 · Unit, production stories/a11y and coverage'

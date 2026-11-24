@@ -192,17 +192,10 @@ jobs:
         with:
           name: frontend-bundle
           path: desktop/dist
-      - name: Require native symbol inspection tools before signing
+      - name: Require installer inspection tools before signing
         run: |
           $ErrorActionPreference = 'Stop'
-          $llvm = 'C:\Program Files\LLVM\bin'
-          if (Test-Path "$llvm/llvm-pdbutil.exe") {
-            Add-Content -Path $env:GITHUB_PATH -Value $llvm
-            $env:PATH = "$llvm;$env:PATH"
-          }
           Get-Command 7z -ErrorAction Stop | Out-Null
-          node tooling/symbols-archive.mjs check-native-tools
-          exit $LASTEXITCODE
       - name: Build and qualify the signed installer from the checked source
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -218,9 +211,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           New-Item -ItemType Directory candidate, reports | Out-Null
           $env:RIFT_UPDATE_ENDPOINT = "https://github.com/$env:GH_REPOSITORY/releases/latest/download/latest.json"
-          # No stale installer, signature or PDB can qualify this build.
+          # No stale installer or signature can qualify this build.
           Remove-Item target/release/bundle/nsis -Recurse -Force -ErrorAction SilentlyContinue
-          Remove-Item target/release/rift_desktop.pdb -Force -ErrorAction SilentlyContinue
           node tooling/release-check.mjs environment
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tooling/tauri-build.mjs --ci -- --locked
@@ -230,8 +222,6 @@ jobs:
           node tooling/prepare-update-assets.mjs "v$version" target/release/bundle/nsis candidate/public
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tooling/packaged-cores.mjs "candidate/public/Rift_${version}_x64-setup.exe"
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          node tooling/symbols-archive.mjs native target/release/rift_desktop.pdb target/release/rift-desktop.exe candidate/public
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tooling/candidate-release.mjs create candidate
           exit $LASTEXITCODE
@@ -243,7 +233,7 @@ jobs:
           retention-days: 7
           if-no-files-found: error
           path: reports/size-budgets.txt
-      # Exact allowlist is validated before upload; frontend maps and third-party PDBs are excluded.
+      # Upload only the verified installer, signature, updater feed and candidate manifest.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: signed-windows-candidate
@@ -253,8 +243,6 @@ jobs:
             candidate/public/*-setup.exe
             candidate/public/*-setup.exe.sig
             candidate/public/latest.json
-            candidate/public/Rift_*_x64.pdb
-            candidate/public/Rift_*_x64.symbols.json
             candidate/manifest.json
   selected-gate:
     name: Quality selected checks

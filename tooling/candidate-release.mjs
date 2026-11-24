@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Promote the qualified installer and its matching audited native PDB without rebuilding.
+// Promote the qualified signed installer without rebuilding.
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { appendFileSync, lstatSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkVersions, repository, tagVersion, validateReleaseAssets, releaseAssets } from "./release-check.mjs";
+import { checkVersions, repository, tagVersion, validateAssets } from "./release-check.mjs";
 import { githubApi, positiveId, sha } from "./pipeline-source.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
@@ -23,24 +23,6 @@ function assetHashes(directory, names) {
     return [name, { sha256: digest(bytes), size: bytes.length }];
   }));
 }
-function validateNativeProvenance(directory, version, identity) {
-  const assets = releaseAssets(version);
-  const record = json(path.join(directory, assets.provenance));
-  if (!keys(record, ["schema", "repository", "source_sha", "source_tree", "version", "run_id", "run_attempt", "kind", "debug_id", "pdb", "files", "executable"]) ||
-      record.schema !== 1 || record.kind !== "native" || record.pdb !== assets.pdb ||
-      record.repository !== identity.repo || record.source_sha !== identity.source || record.source_tree !== identity.tree || record.version !== version ||
-      record.run_id !== identity.runId || record.run_attempt !== identity.runAttempt ||
-      !keys(record.debug_id, ["guid", "age"]) || !/^[0-9a-f]{32}$/.test(record.debug_id.guid) ||
-      !Number.isInteger(record.debug_id.age) || record.debug_id.age < 0 || record.debug_id.age > 0xffffffff ||
-      !keys(record.files, [assets.pdb, assets.installer]))
-    throw new Error("Native symbol provenance does not match the qualified source/run");
-  for (const [name, actual] of Object.entries(assetHashes(directory, [assets.pdb, assets.installer]))) {
-    if (!keys(record.files[name], ["sha256", "size"]) || record.files[name].sha256 !== actual.sha256 || record.files[name].size !== actual.size)
-      throw new Error("Native symbol inventory hash/size mismatch");
-  }
-  if (!keys(record.executable, ["sha256", "size"]) || !/^[0-9a-f]{64}$/.test(record.executable.sha256) || !Number.isSafeInteger(record.executable.size) || record.executable.size < 1)
-    throw new Error("Invalid native executable identity");
-}
 export function createCandidate(directory, { source, tree, repo, runId, runAttempt, actualSource = source, actualTree = tree, base = root }) {
   repository(repo);
   sha(source); sha(tree);
@@ -51,8 +33,7 @@ export function createCandidate(directory, { source, tree, repo, runId, runAttem
   const publicDir = path.join(directory, "public");
   safeDirectory(publicDir);
   const version = json(path.join(base, "desktop/src-tauri/tauri.conf.json")).version;
-  const names = validateReleaseAssets(`v${version}`, publicDir, { base, repo });
-  validateNativeProvenance(publicDir, version, { repo, source, tree, runId: positiveId(runId), runAttempt: positiveId(runAttempt) });
+  const names = validateAssets(`v${version}`, publicDir, { base, repo });
   const manifest = { schema: 2, workflow, repository: repo, source_sha: source, source_tree: tree, run_id: positiveId(runId), run_attempt: positiveId(runAttempt), version, assets: assetHashes(publicDir, names) };
   writeFileSync(path.join(directory, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, { flag: "wx" });
   return manifest;
@@ -68,8 +49,7 @@ export function validateCandidate(directory, selected, { base = root } = {}) {
   const tag = `v${manifest.version}`;
   tagVersion(tag);
   checkVersions(tag, base);
-  const names = validateReleaseAssets(tag, path.join(directory, "public"), { base, repo: selected.repo });
-  validateNativeProvenance(path.join(directory, "public"), manifest.version, selected);
+  const names = validateAssets(tag, path.join(directory, "public"), { base, repo: selected.repo });
   if (!keys(manifest.assets, names)) throw new Error("Candidate asset inventory differs from the public allowlist");
   const actual = assetHashes(path.join(directory, "public"), names);
   for (const name of names) if (!keys(manifest.assets[name], ["sha256", "size"]) || manifest.assets[name].sha256 !== actual[name].sha256 || manifest.assets[name].size !== actual[name].size)
@@ -173,7 +153,7 @@ export async function promoteCandidate(options, api, upload, { base = root } = {
   let release = await releasesForTag(prefix, tag, api);
   const expected = {
     tag_name: tag, target_commitish: selected.releaseSha, name: `Rift ${tag}`, draft: true, prerelease: false,
-    body: `Windows x64. Candidate source ${selected.source}; source tree ${selected.tree}; release commit ${selected.releaseSha}; Quality run ${selected.runId} attempt ${selected.runAttempt}; artifact ${selected.artifactId}; manifest SHA-256 ${digest(readFileSync(path.join(options.directory, "manifest.json")))}. Review the installer, signature, latest.json and matching application PDB provenance before publishing.`,
+    body: `Windows x64. Candidate source ${selected.source}; source tree ${selected.tree}; release commit ${selected.releaseSha}; Quality run ${selected.runId} attempt ${selected.runAttempt}; artifact ${selected.artifactId}; manifest SHA-256 ${digest(readFileSync(path.join(options.directory, "manifest.json")))}. Review the installer, signature and latest.json before publishing.`,
   };
   if (release) {
     assertDraft(release, expected, selected.repo);

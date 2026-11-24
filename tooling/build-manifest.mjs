@@ -13,20 +13,17 @@ import path from "node:path";
 export const MANIFEST_NAME = "build-manifest.json";
 /** Empty file that marks a directory as the output of this build (and so as safe to clear). */
 export const OUTPUT_MARKER = ".rift-build-output";
-/** Debug file and source maps of the build: kept with the release, not shipped, so not listed. */
-export const SYMBOLS_DIR = "symbols";
 const SCHEMA = 1;
 const SETUP = /^bundle\/nsis\/[^/]+-setup\.exe$/;
+const isDebugArtifact = (file) => /(^|\/)symbols(\/|$)|\.(pdb|map)$/i.test(file);
 
 const digest = (file) => createHash("sha256").update(readFileSync(file)).digest("hex");
 
-/** Files below `dir`, relative and `/`-separated, without the manifest, the marker and the
- * symbols (they leave the directory for the release archive, which must not break the check). */
+/** Files below `dir`, relative and `/`-separated, without the manifest and marker. */
 export function listFiles(dir, prefix = "") {
   const found = [];
   for (const entry of readdirSync(path.join(dir, prefix), { withFileTypes: true })) {
     const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
-    if (!prefix && entry.name === SYMBOLS_DIR) continue;
     if (entry.isDirectory()) found.push(...listFiles(dir, relative));
     else if (prefix || (entry.name !== MANIFEST_NAME && entry.name !== OUTPUT_MARKER))
       found.push(relative);
@@ -36,7 +33,10 @@ export function listFiles(dir, prefix = "") {
 
 export function buildManifest(dir, commit) {
   const files = {};
-  for (const file of listFiles(dir)) files[file] = digest(path.join(dir, file));
+  for (const file of listFiles(dir)) {
+    if (isDebugArtifact(file)) throw new Error(`${file} is a forbidden debug artifact`);
+    files[file] = digest(path.join(dir, file));
+  }
   return { schema: SCHEMA, commit, files };
 }
 
@@ -73,6 +73,8 @@ export function manifestProblems(dir, commit) {
   } catch {
     return [...problems, "the output directory cannot be read"];
   }
+  for (const file of new Set([...listed, ...present]))
+    if (isDebugArtifact(file)) problems.push(`${file} is a forbidden debug artifact`);
   for (const file of listed) {
     if (!present.has(file)) problems.push(`${file} is listed but missing`);
     else if (digest(path.join(dir, file)) !== manifest.files[file])

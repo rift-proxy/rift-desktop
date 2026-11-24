@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -55,19 +55,31 @@ test("the manifest and the marker are not part of the listing", () => {
   }
 });
 
-test("the symbols are not part of the manifest, so moving them to the release archive keeps the check green", () => {
-  const dir = output({
-    "symbols/rift_desktop.pdb": "pdb",
-    "symbols/maps/assets/index-ab12.js.map": "{}",
-  });
-  try {
-    assert.ok(!listFiles(dir).some((file) => file.startsWith("symbols")));
-    writeManifest(dir, COMMIT);
-    assert.deepEqual(manifestProblems(dir, COMMIT), []);
-    rmSync(path.join(dir, "symbols"), { recursive: true });
-    assert.deepEqual(manifestProblems(dir, COMMIT), []);
-  } finally {
-    finish(dir);
+test("debug artifacts are never excluded, accepted or written into a manifest", () => {
+  for (const file of [
+    "symbols/rift_desktop.pdb",
+    "symbols/maps/assets/index-ab12.js.map",
+    "symbols/notes.txt",
+    "rift_desktop.PDB",
+    "frontend/assets/index.js.map",
+  ]) {
+    const dir = output();
+    try {
+      writeManifest(dir, COMMIT);
+      const before = readFileSync(path.join(dir, MANIFEST_NAME), "utf8");
+      mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
+      writeFileSync(path.join(dir, file), "debug");
+      assert.ok(listFiles(dir).includes(file), file);
+      assert.match(manifestProblems(dir, COMMIT).join("\n"), /forbidden debug artifact/);
+      assert.throws(() => writeManifest(dir, COMMIT), /forbidden debug artifact/);
+      assert.equal(readFileSync(path.join(dir, MANIFEST_NAME), "utf8"), before);
+      const manifest = JSON.parse(before);
+      manifest.files[file] = "not-a-digest";
+      writeFileSync(path.join(dir, MANIFEST_NAME), JSON.stringify(manifest));
+      assert.match(manifestProblems(dir, COMMIT).join("\n"), /forbidden debug artifact/);
+    } finally {
+      finish(dir);
+    }
   }
 });
 

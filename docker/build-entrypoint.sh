@@ -11,6 +11,11 @@ if [ ! -f /out/.rift-build-output ]; then
   echo "refusing to write: /out is not marked as a build output directory" >&2
   exit 1
 fi
+# Legacy debug output may contain user-kept files: refuse it rather than deleting it.
+if [ -e /out/symbols ] || [ -L /out/symbols ]; then
+  echo "refusing legacy symbols output: move /out/symbols aside or use a new output directory" >&2
+  exit 1
+fi
 if [ -z "${RIFT_BUILD_COMMIT:-}" ]; then
   echo "RIFT_BUILD_COMMIT is not set" >&2
   exit 1
@@ -47,24 +52,16 @@ release=target/x86_64-pc-windows-msvc/release
 # The target volume survives between builds: installers and signatures of earlier builds must not
 # be taken for this one.
 rm -rf "/work/$release/bundle"
-# The interface build leaves its source maps here instead of in dist, which the executable embeds.
-export RIFT_MAPS_DIR=/work/desktop/dist-maps
-rm -rf "$RIFT_MAPS_DIR"
 node tooling/tauri-build.mjs --runner cargo-xwin --target x86_64-pc-windows-msvc --bundles nsis
 rm -f /work/.env
 
-rm -rf /out/bundle/nsis /out/rift-desktop.exe /out/frontend /out/symbols /out/build-manifest.json
+rm -rf /out/bundle/nsis /out/rift-desktop.exe /out/frontend /out/build-manifest.json
 mkdir -p /out/bundle
 cp "$release/rift-desktop.exe" /out/rift-desktop.exe
 cp -r "$release/bundle/nsis" /out/bundle/nsis
 # The frontend inside the executable is compressed; the bundle it was built from is kept beside
 # it so that it can be scanned too.
 cp -r /work/desktop/dist /out/frontend
-# Matching debug files support local investigation of journal errors. Keep them separate from
-# the shipped/scanned files; the build manifest leaves them out. Missing symbols fail the build.
-mkdir -p /out/symbols
-cp "$release/rift_desktop.pdb" /out/symbols/rift_desktop.pdb
-cp -r "$RIFT_MAPS_DIR" /out/symbols/maps
 # Written last: a directory without it is a build that did not finish.
 node tooling/build-manifest.mjs write /out "$RIFT_BUILD_COMMIT"
 echo "built: $(ls /out/bundle/nsis | tr '\n' ' ')"

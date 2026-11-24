@@ -4,11 +4,11 @@
 //
 //   node tooling/docker-build.mjs [--out <dir>] [--release] [--rebuild]
 //
-//   --out <dir>   where rift-desktop.exe, bundle/nsis/, frontend/ and symbols/ (the PDB and the
-//                 source maps) are written (default dist/windows-x64). The directory must be new,
-//                 empty or an earlier output of this build (it holds an empty
-//                 `.rift-build-output` file): only then are rift-desktop.exe, bundle/nsis,
-//                 frontend, symbols and build-manifest.json replaced.
+//   --out <dir>   where rift-desktop.exe, bundle/nsis/ and frontend/ are written (default
+//                 dist/windows-x64). The directory must be new, empty or an earlier output of
+//                 this build (it holds an empty `.rift-build-output` file): only then are
+//                 rift-desktop.exe, bundle/nsis, frontend and build-manifest.json replaced.
+//                 Legacy symbols directories must be moved aside manually; they are not deleted.
 //   --release     also merge src-tauri/tauri.release.conf.json (signed updater artifacts; needs
 //                 TAURI_SIGNING_PRIVATE_KEY and its password in the environment)
 //   --rebuild     rebuild the image without Docker's layer cache
@@ -28,7 +28,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
-import { MANIFEST_NAME, OUTPUT_MARKER, SYMBOLS_DIR } from "./build-manifest.mjs";
+import { MANIFEST_NAME, OUTPUT_MARKER } from "./build-manifest.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 
@@ -71,7 +71,6 @@ export const OUTPUT_ENTRIES = [
   "rift-desktop.exe",
   "bundle/nsis",
   "frontend",
-  SYMBOLS_DIR,
   MANIFEST_NAME,
 ];
 
@@ -270,8 +269,12 @@ export function assertOutputUsable(out) {
   if (entries.length > 0 && !entries.includes(OUTPUT_MARKER))
     throw new Error(
       `${out} is not empty and is not the output of an earlier build: use a new or empty ` +
-        "directory (a build replaces rift-desktop.exe, bundle/nsis, frontend, symbols and " +
+        "directory (a build replaces rift-desktop.exe, bundle/nsis and frontend plus " +
         `${MANIFEST_NAME} there)`,
+    );
+  if (entries.includes("symbols"))
+    throw new Error(
+      `${out} contains legacy symbols output: move symbols aside or use a new output directory`,
     );
 }
 

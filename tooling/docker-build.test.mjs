@@ -299,12 +299,6 @@ test("dependency scripts and downloads run without the secrets, only the build g
   for (const name of FORWARDED_ENV)
     assert.ok(entrypoint.includes(`-u ${name}`), name);
   assert.match(entrypoint, /rm -f \/work\/\.env/);
-  // Only what this script itself produced is replaced in the output directory.
-  assert.match(
-    entrypoint,
-    /^rm -rf \/out\/bundle\/nsis \/out\/rift-desktop\.exe \/out\/frontend \/out\/symbols \/out\/build-manifest\.json$/m,
-  );
-  assert.ok(!/rm -rf \/out\/bundle( |$)/m.test(entrypoint));
 });
 
 test("an exclusion list alone is not a proxy and never selects the host network", () => {
@@ -340,17 +334,19 @@ test("the entry point removes .env however the build ends and keeps the frontend
   assert.match(entrypoint, /cp -r \/work\/desktop\/dist \/out\/frontend/);
 });
 
-test("the entry point keeps the debug file and the source maps beside the build, outside the shipped bundle", () => {
-  // The maps are made outside dist (which the executable embeds) before the build starts...
-  const maps = entrypoint.indexOf("export RIFT_MAPS_DIR=/work/desktop/dist-maps");
-  const build = entrypoint.indexOf("node tooling/tauri-build.mjs");
-  assert.ok(maps > 0 && maps < build);
-  // ...and copied after it; a missing PDB fails the build (set -e), it is never skipped.
-  assert.match(entrypoint, /cp "\$release\/rift_desktop\.pdb" \/out\/symbols\/rift_desktop\.pdb/);
-  assert.match(entrypoint, /cp -r "\$RIFT_MAPS_DIR" \/out\/symbols\/maps/);
-  assert.ok(entrypoint.indexOf("/out/symbols/maps") < entrypoint.indexOf("build-manifest.mjs write"));
-  assert.ok(entrypoint.includes("set -eu"));
-  assert.ok(OUTPUT_ENTRIES.includes("symbols"));
+test("legacy symbols in a marked output are refused without deleting any files", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "docker-build-test-"));
+  try {
+    writeFileSync(path.join(dir, OUTPUT_MARKER), "");
+    writeFileSync(path.join(dir, "rift-desktop.exe"), "previous build");
+    mkdirSync(path.join(dir, "symbols"));
+    writeFileSync(path.join(dir, "symbols", "mine.txt"), "keep");
+    assert.throws(() => prepareOutput(dir), /legacy symbols output/);
+    assert.equal(readFileSync(path.join(dir, "symbols", "mine.txt"), "utf8"), "keep");
+    assert.equal(readFileSync(path.join(dir, "rift-desktop.exe"), "utf8"), "previous build");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("the entry point refuses an unmarked output, builds with a locked Cargo.lock and a clean bundle directory, and writes the manifest last", () => {

@@ -70,8 +70,18 @@ fn update_endpoint(value: Option<String>) -> Result<Option<String>, &'static str
     Ok(Some(endpoint.trim().to_owned()))
 }
 
+fn native_link_arg(target_env: Option<&str>, debug: Option<&str>) -> Option<&'static str> {
+    (target_env == Some("msvc") && debug == Some("false")).then_some("/DEBUG:NONE")
+}
+
 #[cfg(not(test))]
 fn main() {
+    if let Some(argument) = native_link_arg(
+        std::env::var("CARGO_CFG_TARGET_ENV").ok().as_deref(),
+        std::env::var("DEBUG").ok().as_deref(),
+    ) {
+        println!("cargo:rustc-link-arg={argument}");
+    }
     println!("cargo:rerun-if-env-changed=RIFT_UPDATE_ENDPOINT");
     println!("cargo:rerun-if-env-changed=RIFT_BUILD_COMMIT");
     let root = Path::new(&std::env::var("CARGO_MANIFEST_DIR").unwrap()).join("../..");
@@ -102,7 +112,26 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::{const_decl, dotenv_endpoint, endpoint_from, short_commit, update_endpoint};
+    use super::{
+        const_decl, dotenv_endpoint, endpoint_from, native_link_arg, short_commit, update_endpoint,
+    };
+
+    #[test]
+    fn msvc_release_disables_pdb_without_changing_debug_or_non_msvc_builds() {
+        assert_eq!(
+            native_link_arg(Some("msvc"), Some("false")),
+            Some("/DEBUG:NONE")
+        );
+        for (target_env, debug) in [
+            (Some("msvc"), Some("true")),
+            (Some("gnu"), Some("false")),
+            (Some("musl"), Some("false")),
+            (None, Some("false")),
+            (Some("msvc"), None),
+        ] {
+            assert_eq!(native_link_arg(target_env, debug), None);
+        }
+    }
 
     #[test]
     fn updater_is_off_without_an_explicit_endpoint() {

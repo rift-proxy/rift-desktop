@@ -1,12 +1,11 @@
 import assert from "node:assert/strict";
-import { copyFileSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { execFileSync, spawnSync } from "node:child_process";
 import { artifactName, createCandidate, promoteCandidate, selectCandidate, uploadAsset, validateCandidate } from "./candidate-release.mjs";
 import { fixture } from "./release-fixture.mjs";
 import { prepareUpdateAssets } from "./prepare-update-assets.mjs";
-import { publishNativeSymbols } from "./symbols-archive.mjs";
 import { releaseAssets } from "./release-check.mjs";
 
 const source = "a".repeat(40), releaseSha = "b".repeat(40), tree = "c".repeat(40);
@@ -17,16 +16,8 @@ function candidateFixture(t) {
   const f = fixture(t);
   const directory = path.join(f.base, "candidate");
   mkdirSync(directory);
-  const pdb = path.join(f.base, "rift_desktop.pdb"), exe = path.join(f.base, "rift-desktop.exe");
-  writeFileSync(exe, "MZ test-only native executable");
   const stage = path.join(directory, "public");
   prepareUpdateAssets("v1.2.3", f.bundle, stage, f.options);
-  writeFileSync(pdb, "test-only PDB");
-  publishNativeSymbols(pdb, exe, stage, { base: f.base, env: {
-    GITHUB_REPOSITORY: repo, SOURCE_SHA: source, SOURCE_TREE: tree, GITHUB_RUN_ID: String(runId), GITHUB_RUN_ATTEMPT: String(runAttempt),
-  }, run: (command) => command === "llvm-pdbutil"
-    ? "GUID: {01234567-89ab-cdef-0123-456789abcdef}\nAge: 1\n"
-    : "PDBGUID: {01234567-89ab-cdef-0123-456789abcdef}\nPDBAge: 1\n" });
   const identity = { source, tree, repo, runId, runAttempt, base: f.base };
   const manifest = createCandidate(directory, identity);
   return { ...f, directory, identity, manifest };
@@ -87,15 +78,40 @@ test("candidate contains public assets and exact source/tree/run/attempt hashes 
   const f = candidateFixture(t);
   const result = validateCandidate(f.directory, selected, f.options);
   assert.equal(result.tag, "v1.2.3");
-  assert.equal(result.names.length, 5);
+  assert.equal(result.names.length, 3);
   assert.equal(f.manifest.source_sha, source);
   assert.equal(f.manifest.source_tree, tree);
   assert.equal(f.manifest.run_attempt, runAttempt);
   const a = releaseAssets("1.2.3");
-  assert.deepEqual(Object.keys(f.manifest.assets).sort(), [a.installer, `${a.installer}.sig`, a.manifest, a.pdb, a.provenance].sort());
+  assert.deepEqual(Object.keys(f.manifest.assets).sort(), [a.installer, `${a.installer}.sig`, a.manifest].sort());
+  assert.deepEqual(readdirSync(path.join(f.directory, "public")).sort(), result.names.toSorted());
   for (const entry of Object.values(f.manifest.assets)) assert.match(entry.sha256, /^[a-f0-9]{64}$/);
   assert.throws(() => createCandidate(f.directory, f.identity), /only public assets/);
 });
+test("candidate creation rejects stray artifacts and tampering before writing its manifest", async (t) => {
+  for (const kind of ["pdb", "map", "provenance", "installer", "signature", "repository", "version"]) await t.test(kind, (t) => {
+    const f = fixture(t), directory = path.join(f.base, "candidate");
+    mkdirSync(directory);
+    const publicDir = path.join(directory, "public");
+    prepareUpdateAssets("v1.2.3", f.bundle, publicDir, f.options);
+    const assets = releaseAssets("1.2.3");
+    const extra = { pdb: "Rift_1.2.3_x64.pdb", map: "index.js.map", provenance: "Rift_1.2.3_x64.symbols.json" }[kind];
+    if (extra) writeFileSync(path.join(publicDir, extra), "not public");
+    if (kind === "installer") writeFileSync(path.join(publicDir, assets.installer), Buffer.concat([f.data, Buffer.from("changed")]));
+    if (kind === "signature") writeFileSync(path.join(publicDir, `${assets.installer}.sig`), fixture(t).signature());
+    if (kind === "repository" || kind === "version") {
+      const file = path.join(publicDir, assets.manifest), manifest = JSON.parse(readFileSync(file));
+      if (kind === "repository") manifest.platforms["windows-x86_64"].url = "https://github.com/foreign/repo/releases/download/v1.2.3/setup.exe";
+      else manifest.version = "1.2.4";
+      writeFileSync(file, JSON.stringify(manifest));
+    }
+    const before = readdirSync(publicDir).map((name) => [name, readFileSync(path.join(publicDir, name))]);
+    assert.throws(() => createCandidate(directory, { source, tree, repo, runId, runAttempt, base: f.base }));
+    assert.equal(existsSync(path.join(directory, "manifest.json")), false);
+    assert.deepEqual(readdirSync(publicDir).map((name) => [name, readFileSync(path.join(publicDir, name))]), before);
+  });
+});
+
 test("candidate creation refuses a checkout/source or checkout/tree mismatch", (t) => {
   const f = fixture(t);
   for (const actual of [{ actualSource: releaseSha }, { actualTree: source }]) assert.throws(() => createCandidate(f.output, { source, tree, repo, runId, runAttempt, base: f.base, ...actual }), /checkout differs/);
@@ -165,13 +181,13 @@ test("foreign, PR, failed, stale, wrong workflow and expired/ambiguous candidate
     const { state, api } = service(); await assert.rejects(selectCandidate(invalid, api)); noWrites(state);
   }
 });
-test("promotion creates a new immutable main tag and draft with the same installer and plain PDB", async (t) => {
+test("promotion creates a new immutable main tag and draft with exactly three signed updater assets", async (t) => {
   const f = candidateFixture(t), { state, api, upload } = service();
   const result = await promoteCandidate({ ...options, directory: f.directory }, api, upload, f.options);
   assert.deepEqual(result, { tag: "v1.2.3", releaseId: 41, source, release: releaseSha });
   assert.equal(state.tag.object.sha, releaseSha);
   assert.equal(state.remote.draft, true);
-  assert.equal(state.uploads.size, 5);
+  assert.equal(state.uploads.size, 3);
   for (const [name, bytes] of state.uploads) assert.deepEqual(bytes, readFileSync(path.join(f.directory, "public", name)));
   assert.equal(state.uploads.has("manifest.json"), false);
   assert.deepEqual(state.calls.filter((call) => call.method !== "GET").map((call) => call.endpoint), [`/repos/${repo}/git/refs`, `/repos/${repo}/releases`]);
@@ -217,9 +233,9 @@ test("promotion reruns recover lost tag/draft responses and partial uploads with
     let count = 0;
     const interruptedUpload = async (...args) => {
       count++;
-      if (failure === "upload before acceptance" && count === 5) throw new Error("simulated upload failure");
+      if (failure === "upload before acceptance" && count === 3) throw new Error("simulated upload failure");
       await upload(...args);
-      if (failure === "upload response" && count === 5) throw new Error("simulated lost response");
+      if (failure === "upload response" && count === 3) throw new Error("simulated lost response");
     };
     const promoteOptions = { ...options, directory: f.directory };
     await assert.rejects(promoteCandidate(promoteOptions, interruptedApi, interruptedUpload, f.options), /simulated/);
@@ -227,8 +243,8 @@ test("promotion reruns recover lost tag/draft responses and partial uploads with
     assert.equal(state.tag.object.sha, releaseSha);
     const result = await promoteCandidate(promoteOptions, api, upload, f.options);
     assert.equal(result.releaseId, 41);
-    assert.equal(state.uploads.size, 5);
-    assert.equal(state.uploadCalls.length, 5, "each asset uploaded only once, including lost responses");
+    assert.equal(state.uploads.size, 3);
+    assert.equal(state.uploadCalls.length, 3, "each asset uploaded only once, including lost responses");
     for (const [name, bytes] of retained) assert.deepEqual(state.uploads.get(name), bytes);
     assert.equal(state.calls.filter((call) => call.method === "POST" && call.endpoint.endsWith("/git/refs")).length, 1);
     assert.equal(state.calls.filter((call) => call.method === "POST" && call.endpoint.endsWith("/releases")).length, 1);
@@ -236,7 +252,7 @@ test("promotion reruns recover lost tag/draft responses and partial uploads with
     state.calls.length = 0;
     await promoteCandidate(promoteOptions, api, upload, f.options);
     noWrites(state);
-    assert.equal(state.uploadCalls.length, 5, "completed matching drafts are a read-only rerun");
+    assert.equal(state.uploadCalls.length, 3, "completed matching drafts are a read-only rerun");
   });
 });
 
@@ -314,7 +330,7 @@ test("recovery finds matching drafts beyond the first release page and rejects a
     else await promoteCandidate({ ...options, directory: f.directory }, pagedApi, upload, f.options);
     assert.equal(pageTwo, true);
     noWrites(state);
-    assert.equal(state.uploads.size, ambiguous ? 0 : 5);
+    assert.equal(state.uploads.size, ambiguous ? 0 : 3);
   });
 });
 
@@ -358,7 +374,7 @@ test("explicit owner removal of a damaged attributable draft permits recovery wi
   const result = await promoteCandidate(promoteOptions, api, upload, f.options);
   assert.equal(result.tag, "v1.2.3");
   assert.equal(state.tag, tag);
-  assert.equal(state.uploads.size, 5);
+  assert.equal(state.uploads.size, 3);
   assert.equal(state.calls.filter((call) => call.method === "POST" && call.endpoint.endsWith("/git/refs")).length, 1);
   assert.equal(state.calls.filter((call) => call.method === "POST" && call.endpoint.endsWith("/releases")).length, 2);
   assert.equal(state.calls.some((call) => ["PATCH", "DELETE"].includes(call.method)), false);
@@ -398,8 +414,8 @@ test("candidate selection paginates within the authenticated run instead of glob
   noWrites(state);
 });
 
-test("foreign feed, signature swap, PDB tampering and foreign provenance fail before writes", async (t) => {
-  for (const kind of ["feed", "signature", "pdb", "source", "debug identity", "extra pdb"]) await t.test(kind, async (t) => {
+test("foreign feed, installer/signature tampering, identity changes and stray artifacts fail before writes", async (t) => {
+  for (const kind of ["feed", "installer", "signature", "source", "tree", "repository", "run_id", "run_attempt", "workflow", "version", "hash", "size", "extra pdb", "extra map", "symbol provenance"]) await t.test(kind, async (t) => {
     const f = candidateFixture(t), s = service();
     const dir = path.join(f.directory, "public"), assets = releaseAssets("1.2.3");
     if (kind === "feed") {
@@ -408,16 +424,24 @@ test("foreign feed, signature swap, PDB tampering and foreign provenance fail be
       writeFileSync(file, JSON.stringify(record));
     }
     if (kind === "signature") writeFileSync(path.join(dir, assets.installer + ".sig"), fixture(t).signature());
-    if (kind === "pdb") writeFileSync(path.join(dir, assets.pdb), "tampered PDB");
-    if (kind === "extra pdb") writeFileSync(path.join(dir, "third-party.pdb"), "unrelated");
-    if (["source", "debug identity"].includes(kind)) {
-      const file = path.join(dir, assets.provenance), record = JSON.parse(readFileSync(file));
+    if (kind === "installer") writeFileSync(path.join(dir, assets.installer), Buffer.concat([f.data, Buffer.from("changed")]));
+    const extra = { "extra pdb": "Rift_1.2.3_x64.pdb", "extra map": "index.js.map", "symbol provenance": "Rift_1.2.3_x64.symbols.json" }[kind];
+    if (extra) writeFileSync(path.join(dir, extra), "not public");
+    if (["source", "tree", "repository", "run_id", "run_attempt", "workflow", "version", "hash", "size"].includes(kind)) {
+      const record = structuredClone(f.manifest);
       if (kind === "source") record.source_sha = releaseSha;
-      else record.debug_id.guid = "not-a-guid";
-      writeFileSync(file, JSON.stringify(record));
+      else if (kind === "tree") record.source_tree = source;
+      else if (kind === "repository") record.repository = "foreign/repo";
+      else if (kind === "run_id" || kind === "run_attempt") record[kind]++;
+      else if (kind === "workflow") record.workflow = ".github/workflows/release.yml";
+      else if (kind === "version") record.version = "1.2.4";
+      else if (kind === "hash") record.assets[assets.installer].sha256 = "0".repeat(64);
+      else record.assets[assets.installer].size++;
+      writeFileSync(path.join(f.directory, "manifest.json"), JSON.stringify(record));
     }
     await assert.rejects(promoteCandidate({ ...options, directory: f.directory }, s.api, s.upload, f.options));
     noWrites(s.state);
+    assert.equal(s.state.uploadCalls.length, 0);
   });
 });
 
@@ -442,17 +466,10 @@ test("CLI smoke prepares a signed installer and creates the real candidate from 
   };
   const directory = path.join(f.base, "candidate"), publicDir = path.join(directory, "public");
   mkdirSync(directory);
-  const pdb = path.join(f.base, "rift_desktop.pdb"), exe = path.join(f.base, "rift-desktop.exe");
-  writeFileSync(exe, "MZ fixture executable; LLVM identity is test-injected, not a real PE/PDB");
   cli("prepare-update-assets.mjs", ["v1.2.3", f.bundle, publicDir]);
-  writeFileSync(pdb, "fixture PDB; not a real PDB");
-  publishNativeSymbols(pdb, exe, publicDir, { base: f.base, env,
-    run: (command) => command === "llvm-pdbutil"
-      ? "GUID: {01234567-89ab-cdef-0123-456789abcdef}\nAge: 1\n"
-      : "PDBGUID: {01234567-89ab-cdef-0123-456789abcdef}\nPDBAge: 1\n" });
   cli("candidate-release.mjs", ["create", directory]);
   cli("release-check.mjs", ["assets", "v1.2.3", publicDir]);
   const result = validateCandidate(directory, { ...selected, source: actualSource, tree: actualTree }, f.options);
-  assert.equal(result.names.length, 5);
+  assert.equal(result.names.length, 3);
   assert.equal(result.manifest.source_tree, actualTree);
 });

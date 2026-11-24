@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       candidate_run_id:
-        description: Successful manual dev Quality run with the accepted signed installer and matching PDB
+        description: Successful manual dev Quality run with the accepted signed installer
         required: true
         type: string
 permissions:
@@ -44,7 +44,7 @@ jobs:
           github-token: ${{ github.token }}
           path: candidate
           merge-multiple: true
-      - name: Revalidate installer, matching PDB provenance, hashes and refs; create tag and draft
+      - name: Revalidate installer, signature, hashes and refs; create tag and draft
         env:
           GITHUB_TOKEN: ${{ github.token }}
           CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
