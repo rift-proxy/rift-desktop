@@ -57,8 +57,7 @@ export function repository(value = process.env.GITHUB_REPOSITORY) {
   return value;
 }
 export function releaseAssets(version) {
-  return { installer: `Rift_${version}_x64-setup.exe`, manifest: "latest.json",
-    pdb: `Rift_${version}_x64.pdb`, provenance: `Rift_${version}_x64.symbols.json` };
+  return { installer: `Rift_${version}_x64-setup.exe`, manifest: "latest.json" };
 }
 export function checkEnvironment(env = process.env) {
   if (!env.TAURI_SIGNING_PRIVATE_KEY?.trim()) throw new Error("Missing TAURI_SIGNING_PRIVATE_KEY");
@@ -127,11 +126,10 @@ function validPublicationDate(value) {
   const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
   return day <= [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
 }
-export function validateAssets(tag, directory, { base = root, repo = process.env.GITHUB_REPOSITORY, combined = false } = {}) {
+export function validateAssets(tag, directory, { base = root, repo = process.env.GITHUB_REPOSITORY } = {}) {
   const version = checkVersions(tag, base);
   const names = releaseAssets(version);
-  const { installer, data, signature } = combined
-    ? readInstaller(directory, names.installer) : installerFiles(directory, version, true);
+  const { installer, data, signature } = installerFiles(directory, version, true);
   if (verifySignature(data, signature, json(path.join(base, "desktop/src-tauri/tauri.conf.json")).plugins.updater.pubkey) !== version)
     throw new Error("Signed installer version does not match release tag");
   const manifest = json(path.join(directory, names.manifest));
@@ -146,24 +144,12 @@ export function validateAssets(tag, directory, { base = root, repo = process.env
     throw new Error("Updater manifest does not match signed assets/repository");
   return [installer, `${installer}.sig`, names.manifest];
 }
-function readInstaller(directory, installer) {
-  const data = readFileSync(path.join(directory, installer));
-  if (data.length < 64 || data.subarray(0, 2).toString() !== "MZ") throw new Error("Invalid Windows installer");
-  return { installer, data, signature: readFileSync(path.join(directory, `${installer}.sig`), "utf8").trim() };
-}
-export function validateReleaseAssets(tag, directory, options = {}) {
-  const version = checkVersions(tag, options.base ?? root);
-  const assets = releaseAssets(version);
-  const names = [...validateAssets(tag, directory, { ...options, combined: true }), assets.pdb, assets.provenance];
-  if (JSON.stringify(files(directory)) !== JSON.stringify(names.sort())) throw new Error("Unexpected or missing release assets");
-  return names;
-}
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const [command, tag, input, ...extra] = process.argv.slice(2);
     if (command === "environment" && !tag) { checkEnvironment(); console.log("Release environment validated."); }
     else if (command === "versions" && tag && !input) console.log(checkVersions(tag));
-    else if (command === "assets" && tag && input && !extra.length) console.log(validateReleaseAssets(tag, input).join("\n"));
+    else if (command === "assets" && tag && input && !extra.length) console.log(validateAssets(tag, input).join("\n"));
     else throw new Error("Usage: release-check.mjs versions <tag> | environment | assets <tag> <assets-dir>");
   } catch (error) { console.error(error.message); process.exitCode = 1; }
 }

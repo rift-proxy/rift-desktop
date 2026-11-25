@@ -107,7 +107,7 @@ jobs:
           cargo llvm-cov -p rift-core --locked --json --summary-only --output-path reports/rust-coverage-raw.json
           node tooling/coverage-summary.mjs reports/rust-coverage-raw.json reports/rust-coverage.json
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        if: always()
+        if: ${{ always() && hashFiles('reports/rust-coverage.json') != '' }}
         with:
           name: rust-coverage
           path: reports/rust-coverage.json

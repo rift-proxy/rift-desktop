@@ -4,11 +4,11 @@
 //
 //   node tooling/docker-build.mjs [--out <dir>] [--release] [--rebuild]
 //
-//   --out <dir>   where rift-desktop.exe, bundle/nsis/, frontend/ and symbols/ (the PDB and the
-//                 source maps) are written (default dist/windows-x64). The directory must be new,
-//                 empty or an earlier output of this build (it holds an empty
-//                 `.rift-build-output` file): only then are rift-desktop.exe, bundle/nsis,
-//                 frontend, symbols and build-manifest.json replaced.
+//   --out <dir>   where rift-desktop.exe, bundle/nsis/ and frontend/ are written (default
+//                 dist/windows-x64). The directory must be new, empty or an earlier output of
+//                 this build (it holds an empty `.rift-build-output` file): only then are
+//                 rift-desktop.exe, bundle/nsis, frontend and build-manifest.json replaced.
+//                 Legacy symbols directories must be moved aside manually; they are not deleted.
 //   --release     also merge src-tauri/tauri.release.conf.json (signed updater artifacts; needs
 //                 TAURI_SIGNING_PRIVATE_KEY and its password in the environment)
 //   --rebuild     rebuild the image without Docker's layer cache
@@ -28,7 +28,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
-import { MANIFEST_NAME, OUTPUT_MARKER, SYMBOLS_DIR } from "./build-manifest.mjs";
+import { MANIFEST_NAME, OUTPUT_MARKER } from "./build-manifest.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 
@@ -51,9 +51,6 @@ export const FORWARDED_ENV = [
   "TAURI_SIGNING_PRIVATE_KEY_PASSWORD",
 ];
 export const RELEASE_BUNDLE_CONFIG = "src-tauri/tauri.release.conf.json";
-/** Where `.env` is mounted: outside /work, so install scripts of dependencies do not see it; the
- * entry point copies it into place only for the build itself. */
-export const SECRETS_ENV_FILE = "/run/rift-build/.env";
 /** Standard proxy variables, forwarded by name like the secrets (a proxy URL may carry a login). */
 export const PROXY_URL_ENV = [
   "HTTP_PROXY",
@@ -71,7 +68,6 @@ export const OUTPUT_ENTRIES = [
   "rift-desktop.exe",
   "bundle/nsis",
   "frontend",
-  SYMBOLS_DIR,
   MANIFEST_NAME,
 ];
 
@@ -156,7 +152,7 @@ export function imageBuildArgs({ uid, gid, rebuild }) {
   ];
 }
 
-export function runArgs({ out, rootDir, release, env, hasDotEnv, commit }) {
+export function runArgs({ out, release, env, commit }) {
   return [
     "run",
     "--rm",
@@ -171,9 +167,6 @@ export function runArgs({ out, rootDir, release, env, hasDotEnv, commit }) {
     ...CACHE_VOLUMES.flatMap(([name, target]) => ["--volume", `${name}:${target}`]),
     "--volume",
     `${out}:/out`,
-    ...(hasDotEnv
-      ? ["--volume", `${path.join(rootDir, ".env")}:${SECRETS_ENV_FILE}:ro`]
-      : []),
     ...FORWARDED_ENV.filter((name) => env[name] !== undefined).flatMap((name) => [
       "--env",
       name,
@@ -270,8 +263,12 @@ export function assertOutputUsable(out) {
   if (entries.length > 0 && !entries.includes(OUTPUT_MARKER))
     throw new Error(
       `${out} is not empty and is not the output of an earlier build: use a new or empty ` +
-        "directory (a build replaces rift-desktop.exe, bundle/nsis, frontend, symbols and " +
+        "directory (a build replaces rift-desktop.exe, bundle/nsis and frontend plus " +
         `${MANIFEST_NAME} there)`,
+    );
+  if (entries.includes("symbols"))
+    throw new Error(
+      `${out} contains legacy symbols output: move symbols aside or use a new output directory`,
     );
 }
 
@@ -341,10 +338,8 @@ export async function main(argv) {
     plan.source,
     runArgs({
       out,
-      rootDir: root,
       release: options.release,
       env: process.env,
-      hasDotEnv: existsSync(path.join(root, ".env")),
       commit,
     }),
   );

@@ -1,0 +1,27 @@
+diff --git a/dist/_node-chunks/chunk-XTLUHE5K.js b/dist/_node-chunks/chunk-XTLUHE5K.js
+--- a/dist/_node-chunks/chunk-XTLUHE5K.js
++++ b/dist/_node-chunks/chunk-XTLUHE5K.js
+@@ -2131,7 +2131,7 @@
+ // src/common/utils/envs.ts
+ import { isWebContainer } from "@webcontainer/env";
+ async function loadEnvs(options = {}) {
+-  let { getEnvironment } = await import("./lib-E6PT44XV.js"), defaultNodeEnv = options.production ? "production" : "development", baseEnv = {
++  let defaultNodeEnv = options.production ? "production" : "development", baseEnv = {
+     NODE_ENV: process.env.NODE_ENV || defaultNodeEnv,
+     NODE_PATH: process.env.NODE_PATH || "",
+     STORYBOOK: process.env.STORYBOOK || "true",
+@@ -2140,12 +2140,8 @@
+     // even when deployed inside a subpath. (like in GitHub pages)
+     // In development this is just empty as we always serves from the root.
+     PUBLIC_URL: options.production ? "." : ""
+-  }, dotenv = getEnvironment({ nodeEnv: baseEnv.NODE_ENV }), envEntries = Object.fromEntries(
+-    Object.entries({
+-      // TODO: it seems wrong that dotenv overrides process.env, but that's how it has always worked
+-      ...process.env,
+-      ...dotenv.raw
+-    }).filter(([name]) => /^STORYBOOK_/.test(name))
++  }, envEntries = Object.fromEntries(
++    Object.entries(process.env).filter(([name]) => /^STORYBOOK_/.test(name))
+   ), raw = { ...baseEnv, ...envEntries };
+   raw.NODE_PATH = nodePathsToArray(raw.NODE_PATH || "");
+   let stringified = Object.fromEntries(

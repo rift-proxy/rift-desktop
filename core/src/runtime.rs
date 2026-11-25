@@ -510,9 +510,19 @@ async fn feed(child: &mut Child, config: &[u8]) -> std::io::Result<()> {
         .stdin
         .take()
         .ok_or_else(|| std::io::Error::other(t("core.runtime.no_config_channel")))?;
-    stdin.write_all(config).await?;
-    stdin.shutdown().await?;
-    Ok(())
+    let result = async {
+        stdin.write_all(config).await?;
+        stdin.shutdown().await
+    }
+    .await;
+    drop(stdin);
+    if result.is_err() {
+        // A closed pipe can precede the observable exit status. Do not let cleanup
+        // kill the child in that gap and replace its natural exit with Requested.
+        // Both callers bound this wait by the existing feed/config-check timeout.
+        let _ = child.wait().await;
+    }
+    result
 }
 /// Removes configs with credentials left by earlier versions; only these two own files.
 fn remove_legacy_configs(directory: &std::path::Path) -> Result<()> {
@@ -796,6 +806,71 @@ impl Drop for Sidecar {
 #[cfg(all(test, unix))]
 mod lifecycle_tests {
     use super::*;
+
+    #[tokio::test]
+    async fn a_closed_config_pipe_retains_the_natural_exit_or_reaches_its_deadline() {
+        for natural_exit in [false, true] {
+            let dir = tempfile::tempdir().unwrap();
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let mut child = Command::new("python3")
+                .args([
+                    "-c",
+                    "import os, socket, sys\nos.close(0)\nwith socket.create_connection(('127.0.0.1', int(sys.argv[1]))) as control:\n    control.recv(1)\nsys.exit(3)\n",
+                    &listener.local_addr().unwrap().port().to_string(),
+                ])
+                .stdin(Stdio::piped())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .kill_on_drop(true)
+                .spawn()
+                .unwrap();
+            // Connecting proves stdin is closed; only this socket lets the child exit.
+            let (mut control, _) = timeout(Duration::from_secs(5), listener.accept())
+                .await
+                .unwrap()
+                .unwrap();
+            {
+                let fed = feed(&mut child, b"{}");
+                tokio::pin!(fed);
+                assert!(
+                    timeout(Duration::from_millis(100), &mut fed).await.is_err(),
+                    "a broken pipe must not trigger cleanup before the child exits"
+                );
+                if natural_exit {
+                    control.write_all(b"x").await.unwrap();
+                    let error = timeout(Duration::from_secs(5), fed)
+                        .await
+                        .unwrap()
+                        .unwrap_err();
+                    assert_eq!(error.kind(), std::io::ErrorKind::BrokenPipe);
+                }
+            }
+            let mut sidecar = Sidecar::new("/bin/sh".into(), dir.path().into());
+            sidecar.generation = 1;
+            sidecar.child = Some(child);
+            sidecar.stop().await.unwrap();
+            assert!(sidecar.pid().is_none());
+            let facts = sidecar.diagnostics();
+            assert_eq!(facts.generation, 1);
+            assert_eq!(facts.exits.len(), 1);
+            let exit = &facts.exits[0];
+            assert_eq!(exit.engine, Engine::SingBox);
+            assert_eq!(exit.stage, ExitStage::Startup);
+            if natural_exit {
+                assert_eq!(facts.primary_exit, Some(Engine::SingBox));
+                assert_eq!(exit.termination, Termination::Unexpected);
+                assert_eq!(exit.code, Some(3));
+                assert_eq!(exit.signal, None);
+            } else {
+                assert_eq!(facts.primary_exit, None);
+                assert_eq!(exit.termination, Termination::Requested);
+                assert_eq!(exit.code, None);
+                assert_eq!(exit.signal, Some(9));
+            }
+            sidecar.stop().await.unwrap();
+            assert_eq!(sidecar.diagnostics(), facts);
+        }
+    }
 
     #[tokio::test]
     async fn running_exit_retains_status_and_requested_stop_is_not_a_crash() {

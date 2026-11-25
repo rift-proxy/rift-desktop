@@ -60,6 +60,8 @@ test("real Ed25519 signatures authenticate installer, key ID and trusted comment
 test("validation fails closed for asset and manifest tampering", (t) => {
   for (const mutate of [
     (f) => f.put("release/source.js.map", "private source"),
+    (f) => f.put("release/Rift_1.2.3_x64.pdb", "private symbols"),
+    (f) => f.put("release/Rift_1.2.3_x64.symbols.json", "{}"),
     (f) => f.put("release/Rift_1.2.3_x64-setup.exe", Buffer.concat([Buffer.from("MZ"), Buffer.alloc(256)])),
     (f, m) => { m.version = "1.2.4"; },
     (f, m) => { m.platforms["windows-x86_64"].url = "https://evil.invalid/setup.exe"; },

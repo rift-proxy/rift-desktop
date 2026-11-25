@@ -11,6 +11,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
+import { createRequire } from "node:module";
 import path from "node:path";
 import {
   bundleConfigArgs,
@@ -212,4 +213,60 @@ test("a real run hands the tauri CLI both the rustc remaps and the C compiler's 
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("the installed Tauri CLI passes only process values to its build hook despite adjacent dotenv files", (t) => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "tauri-cli-env-test-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  const native = path.join(dir, "src-tauri");
+  mkdirSync(path.join(native, "src"), { recursive: true });
+  writeFileSync(path.join(dir, "package.json"), JSON.stringify({
+    name: "rift-isolated-env-consumer", version: "0.0.0", private: true,
+  }));
+  writeFileSync(path.join(native, "Cargo.toml"),
+    '[package]\nname = "rift-isolated-env-consumer"\nversion = "0.0.0"\nedition = "2021"\n');
+  writeFileSync(path.join(native, "src/main.rs"), "fn main() {}\n");
+  writeFileSync(path.join(native, "tauri.conf.json"), JSON.stringify({
+    productName: "RiftIsolatedEnvConsumer",
+    version: "0.0.0",
+    identifier: "test.rift.environment",
+    build: { beforeBuildCommand: "node probe.cjs", frontendDist: "../dist" },
+  }));
+  // Abort at the real hook: no native compilation, bundling or signing is needed.
+  writeFileSync(path.join(dir, "probe.cjs"), `
+    require("node:fs").writeFileSync("record.json", JSON.stringify({
+      fileOnly: process.env.RIFT_TAURI_ENV_FILE_ONLY ?? null,
+      explicit: process.env.RIFT_TAURI_ENV_EXPLICIT,
+      encodedRustflags: process.env.CARGO_ENCODED_RUSTFLAGS,
+    }));
+    process.exit(63);
+  `);
+  for (const base of [dir, native]) {
+    for (const name of [
+      ".env", ".env.local", ".env.production", ".env.production.local",
+      ".env.development", ".env.development.local",
+    ]) {
+      writeFileSync(path.join(base, name),
+        "RIFT_TAURI_ENV_FILE_ONLY=dotenv-only\nRIFT_TAURI_ENV_EXPLICIT=dotenv-override\n");
+    }
+  }
+  const require = createRequire(path.resolve(import.meta.dirname, "../desktop/package.json"));
+  const cli = path.join(path.dirname(require.resolve("@tauri-apps/cli/package.json")), "tauri.js");
+  const env = {
+    ...process.env,
+    CARGO_NET_OFFLINE: "true",
+    RIFT_TAURI_ENV_EXPLICIT: "explicit-process-value",
+    CARGO_ENCODED_RUSTFLAGS: "--cfg=environment_probe\x1f--remap-path-prefix=/synthetic=/source",
+  };
+  delete env.RIFT_TAURI_ENV_FILE_ONLY;
+  const result = spawnSync(process.execPath, [cli, "build", "--no-bundle"], {
+    cwd: dir, env, encoding: "utf8", timeout: 30_000,
+  });
+  assert.equal(result.status, 1, `${result.error ?? ""}\n${result.stdout}\n${result.stderr}`);
+  assert.match(result.stderr, /beforeBuildCommand .*failed with exit code 63/);
+  assert.deepEqual(JSON.parse(readFileSync(path.join(dir, "record.json"), "utf8")), {
+    fileOnly: null,
+    explicit: "explicit-process-value",
+    encodedRustflags: env.CARGO_ENCODED_RUSTFLAGS,
+  });
 });

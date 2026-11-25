@@ -10,7 +10,6 @@ reports/
 .tools/
 .env
 .env.*
-!.env.example
 *.log
 desktop/src-tauri/binaries/*
 !desktop/src-tauri/binaries/.gitkeep
