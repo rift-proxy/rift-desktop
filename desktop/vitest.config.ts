@@ -29,6 +29,7 @@ export default defineConfig({
   test: {
     coverage: {
       provider: "v8",
+      reportOnFailure: true,
       include: [
         "src/format.ts",
         "src/viewmodel.ts",

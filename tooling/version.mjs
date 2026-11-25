@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { checkVersions, tagVersion } from "./release-check.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
-const files = ["Cargo.toml", "desktop/package.json", "desktop/src-tauri/tauri.conf.json", "Cargo.lock", "fuzz/Cargo.lock"];
+const files = ["Cargo.toml", "desktop/package.json", "desktop/src-tauri/tauri.conf.json", "Cargo.lock", "fuzz/Cargo.lock", "desktop/src/testing/core-contract.json"];
 const localNames = new Set(["rift-core", "rift-desktop", "rift-fuzz"]);
 const lines = (text) => [...text.matchAll(/[^\n]*(?:\n|$)/g)].filter((match) => match[0]);
 const content = (line) => line.replace(/\r?\n$/, "");
@@ -47,7 +47,7 @@ function workspaceVersion(text, next) {
   return { current, text: replaceSpans(text, [{ ...slot, value: JSON.stringify(next ?? current) }]) };
 }
 
-function jsonVersion(text, next) {
+function jsonVersion(text, next, key = "version") {
   const parsed = JSON.parse(text);
   if (!parsed || Array.isArray(parsed) || typeof parsed !== "object") throw new Error("Expected a JSON object manifest");
   let depth = 0;
@@ -57,16 +57,16 @@ function jsonVersion(text, next) {
   for (const token of text.matchAll(/"(?:\\[\s\S]|[^"\\])*"|[{}\[\]]/g)) {
     if (token[0] === "{" || token[0] === "[") depth++;
     else if (token[0] === "}" || token[0] === "]") depth--;
-    else if (depth === 1 && JSON.parse(token[0]) === "version") {
+    else if (depth === 1 && JSON.parse(token[0]) === key) {
       const after = text.slice(token.index + token[0].length);
       const value = /^[ \t\r\n]*:[ \t\r\n]*("(?:\\[\s\S]|[^"\\])*")/.exec(after);
       if (value) {
         const start = token.index + token[0].length + value[0].length - value[1].length;
         slots.push({ start, end: start + value[1].length, value: JSON.parse(value[1]) === next ? value[1] : JSON.stringify(next) });
-      } else if (/^[ \t\r\n]*:/.test(after)) throw new Error("Expected a string manifest version");
+      } else if (/^[ \t\r\n]*:/.test(after)) throw new Error(`Expected a string ${key}`);
     }
   }
-  if (slots.length !== 1) throw new Error("Expected one top-level JSON version");
+  if (slots.length !== 1) throw new Error(`Expected one top-level JSON ${key}`);
   return replaceSpans(text, slots);
 }
 
@@ -196,7 +196,7 @@ function install(base, originals, plan, modes) {
     for (const item of staged)
       if (!retained.has(item.directory)) rmSync(item.directory, { recursive: true, force: true });
   }
-  // Renames are per-file, not a crash-atomic transaction across five paths.
+  // Renames are per-file, not a crash-atomic transaction across all paths.
 }
 
 export function setVersion(version, base = root) {
@@ -213,10 +213,14 @@ export function setVersion(version, base = root) {
   }
   const workspace = workspaceVersion(originals.get("Cargo.toml"), version);
   checkVersions(`v${workspace.current}`, base);
+  const reference = originals.get("desktop/src/testing/core-contract.json");
+  if (JSON.parse(reference).app_version !== workspace.current)
+    throw new Error("Version mismatch in desktop/src/testing/core-contract.json");
   const plan = new Map([
     ["Cargo.toml", workspace.text],
     ...files.slice(1, 3).map((name) => [name, jsonVersion(originals.get(name), version)]),
-    ...files.slice(3).map((name) => [name, lockVersion(originals.get(name), workspace.current, version)]),
+    ...files.slice(3, 5).map((name) => [name, lockVersion(originals.get(name), workspace.current, version)]),
+    ["desktop/src/testing/core-contract.json", jsonVersion(reference, version, "app_version")],
   ]);
   if ([...plan].every(([name, text]) => originals.get(name) === text)) return version;
   validatePlan(version, plan, originals.get("fuzz/Cargo.toml"));
